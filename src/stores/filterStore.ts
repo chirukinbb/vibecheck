@@ -1,0 +1,38 @@
+// src/stores/filterStore.ts — гео-фильтр
+import {create} from 'zustand';
+import type {FilterUpdateDTO} from '../types';
+import {updateFilter} from '../api/filter';
+import {useAuthStore} from './authStore';
+
+interface FilterState {
+  isUpdating: boolean;
+  error: string | null;
+
+  saveFilter: (dto: FilterUpdateDTO) => Promise<string | null>;
+}
+
+export const useFilterStore = create<FilterState>((set) => ({
+  isUpdating: false,
+  error: null,
+
+  saveFilter: async (dto) => {
+    set({isUpdating: true, error: null});
+    try {
+      const res = await updateFilter(dto);
+      // Синхронизируем с authStore — фильтр обновлён на сервере,
+      // категории сохраняем локально, центр появится при следующем fetch
+      useAuthStore.getState().setFilter({
+        center: useAuthStore.getState().filter?.center ?? null,
+        radius: dto.radius,
+        categories: dto.categories,
+      });
+      return res.message;
+    } catch (e: any) {
+      const msg = e?.message ?? 'Ошибка обновления фильтра';
+      set({error: msg});
+      return null;
+    } finally {
+      set({isUpdating: false});
+    }
+  },
+}));
