@@ -1,9 +1,10 @@
 // src/app/(tabs)/index.tsx — список событий
 import {router} from 'expo-router';
 import {FlatList, StyleSheet, View} from 'react-native';
-import {Card, Chip, ProgressBar, Surface, Text, useTheme,} from 'react-native-paper';
+import {Card, Chip, Icon, ProgressBar, Text, useTheme,} from 'react-native-paper';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
+import PageLayout from '@/components/page-layout';
 import {formatDate, MOCK_EVENTS} from '@/constants/mock-data';
 import {MaxContentWidth, Spacing} from '@/constants/theme';
 
@@ -12,30 +13,29 @@ export default function EventsListScreen() {
   const insets = useSafeAreaInsets();
 
   return (
-      <Surface style={styles.root} mode="flat">
+      <PageLayout title="События">
         <FlatList
             data={MOCK_EVENTS}
             keyExtractor={(item) => String(item.id)}
             contentContainerStyle={[
               styles.list,
-              {
-                paddingTop: insets.top + Spacing.three,
-                paddingBottom: insets.bottom + 100,
-              },
+              {paddingBottom: insets.bottom + Spacing.four},
             ]}
-            ListHeaderComponent={
-              <Text variant="headlineMedium" style={styles.pageTitle}>
-                События
-              </Text>
-            }
             showsVerticalScrollIndicator={false}
             renderItem={({item}) => {
               const slotsLeft = item.slots - item.reserved;
               const isFull = slotsLeft <= 0;
               const isAlmostFull = slotsLeft <= 3;
 
+              const statusColor = isFull
+                  ? theme.colors.error
+                  : isAlmostFull
+                      ? theme.colors.error
+                      : theme.colors.primary;
+
               return (
                   <Card
+                      mode="outlined"
                       onPress={() => router.push(`/event/${item.id}`)}
                       style={styles.card}
                   >
@@ -45,17 +45,24 @@ export default function EventsListScreen() {
                     />
 
                     <Card.Content style={styles.cardBody}>
-                      {/* Категория */}
-                      <Chip
-                          compact
-                          style={styles.categoryBadge}
-                          textStyle={styles.categoryText}
-                      >
-                        {item.category}
-                      </Chip>
+                      {/* Категория с динамическими цветами из темы */}
+                      <Card.Content style={styles.badgeRow}>
+                        <Chip
+                            compact
+                            mode="flat"
+                            style={{
+                              backgroundColor: theme.colors.secondaryContainer,
+                            }}
+                            textStyle={{
+                              color: theme.colors.onSecondaryContainer,
+                            }}
+                        >
+                          {item.category}
+                        </Chip>
+                      </Card.Content>
 
-                      {/* Заголовок */}
-                      <Text variant="bodyLarge" style={{fontWeight: '700'}}>
+                      {/* Заголовок по гайдлайнам M3 для Cards */}
+                      <Text variant="titleLarge" style={styles.cardTitle}>
                         {item.title}
                       </Text>
 
@@ -70,19 +77,23 @@ export default function EventsListScreen() {
 
                       {/* Дата + места */}
                       <View style={styles.cardFooter}>
-                        <Text
-                            variant="bodyMedium"
-                            style={{color: theme.colors.onSurfaceVariant}}
-                        >
-                          📅 {formatDate(item.planing_time)}
-                        </Text>
+                        <View style={styles.dateContainer}>
+                          <Icon
+                              source="calendar"
+                              size={18}
+                              color={theme.colors.onSurfaceVariant}
+                          />
+                          <Text
+                              variant="bodyMedium"
+                              style={{color: theme.colors.onSurfaceVariant}}
+                          >
+                            {formatDate(item.planing_time)}
+                          </Text>
+                        </View>
+
                         <Text
                             variant="labelLarge"
-                            style={{
-                              color: isAlmostFull
-                                  ? theme.colors.error
-                                  : theme.colors.primary,
-                            }}
+                            style={{color: statusColor, fontWeight: '600'}}
                         >
                           {isFull
                               ? 'Мест нет'
@@ -93,9 +104,7 @@ export default function EventsListScreen() {
                       {/* Прогресс-бар */}
                       <ProgressBar
                           progress={item.reserved / item.slots}
-                          color={
-                            isFull ? theme.colors.error : theme.colors.primary
-                          }
+                          color={statusColor}
                           style={styles.progressBar}
                       />
                     </Card.Content>
@@ -103,45 +112,46 @@ export default function EventsListScreen() {
               );
             }}
         />
-      </Surface>
+      </PageLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {flex: 1},
   list: {
     maxWidth: MaxContentWidth,
     alignSelf: 'center',
     width: '100%',
     paddingHorizontal: Spacing.three,
+    paddingTop: Spacing.two,
     gap: Spacing.three,
   },
-  pageTitle: {
-    fontWeight: '700',
-    paddingVertical: Spacing.two,
-  },
   card: {
-    borderRadius: Spacing.three,
     overflow: 'hidden',
-    marginBottom: Spacing.three,
   },
-  thumb: {height: 180},
+  thumb: {
+    height: 180,
+    borderRadius: 0, // Чтобы обложка красиво подходила к краям карточки M3
+  },
   cardBody: {
-    gap: Spacing.one,
+    gap: Spacing.two,
     paddingTop: Spacing.three,
   },
-  categoryBadge: {
-    backgroundColor: '#208AEF',
-    borderRadius: Spacing.two,
-    height: 28,
-    alignSelf: 'flex-start',
+  badgeRow: {
+    flexDirection: 'row',
   },
-  categoryText: {color: '#FFFFFF', fontSize: 12},
+  cardTitle: {
+    fontWeight: '700',
+  },
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: Spacing.two,
+    paddingTop: Spacing.one,
+  },
+  dateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
   },
   progressBar: {
     height: 6,

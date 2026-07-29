@@ -3,14 +3,13 @@ import {router} from 'expo-router';
 import {useState} from 'react';
 import {KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View} from 'react-native';
 import {Button, Chip, Surface, Text, TextInput, useTheme,} from 'react-native-paper';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
+import PageLayout from '@/components/page-layout';
 import {MOCK_CATEGORIES} from '@/constants/mock-data';
 import {MaxContentWidth, Spacing} from '@/constants/theme';
 
 export default function CreateEventScreen() {
   const theme = useTheme();
-  const insets = useSafeAreaInsets();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -37,7 +36,7 @@ export default function CreateEventScreen() {
   };
 
   return (
-      <Surface style={styles.root} mode="flat">
+      <PageLayout title="Новое событие">
         <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.flex}
@@ -45,17 +44,11 @@ export default function CreateEventScreen() {
           <ScrollView
               contentContainerStyle={[
                 styles.content,
-                {
-                  paddingTop: insets.top + Spacing.three,
-                  paddingBottom: insets.bottom + 100,
-                },
+                {paddingTop: Spacing.three, paddingBottom: 100},
               ]}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
           >
-            <Text variant="headlineMedium" style={styles.title}>
-              Новое событие
-            </Text>
 
             <Surface elevation={2} style={styles.form}>
               {/* Название */}
@@ -162,12 +155,11 @@ export default function CreateEventScreen() {
             </Surface>
           </ScrollView>
         </KeyboardAvoidingView>
-      </Surface>
+      </PageLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {flex: 1},
   flex: {flex: 1},
   content: {
     maxWidth: MaxContentWidth,
@@ -175,7 +167,6 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingHorizontal: Spacing.three,
   },
-  title: {fontWeight: '700', paddingBottom: Spacing.three},
   form: {
     borderRadius: Spacing.three,
     padding: Spacing.three,

@@ -1,28 +1,27 @@
 // src/app/event/[id].tsx — детальная страница события
-import {useLocalSearchParams} from 'expo-router';
+import {router, useLocalSearchParams} from 'expo-router';
 import {ScrollView, StyleSheet, View} from 'react-native';
 import {Avatar, Button, Card, Chip, ProgressBar, Surface, Text, useTheme,} from 'react-native-paper';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
+import PageLayout from '@/components/page-layout';
 import {formatDate, getEventById} from '@/constants/mock-data';
 import {MaxContentWidth, Spacing} from '@/constants/theme';
 
 export default function EventDetailScreen() {
   const {id} = useLocalSearchParams<{ id: string }>();
   const theme = useTheme();
-  const insets = useSafeAreaInsets();
 
   const event = getEventById(Number(id));
 
   if (!event) {
     return (
-        <Surface style={styles.root} mode="flat">
+        <PageLayout title="Событие не найдено">
           <View style={styles.centered}>
             <Text variant="bodyLarge" style={{color: theme.colors.onSurfaceVariant}}>
               Событие не найдено
             </Text>
           </View>
-        </Surface>
+        </PageLayout>
     );
   }
 
@@ -31,13 +30,15 @@ export default function EventDetailScreen() {
   const isAlmostFull = slotsLeft <= 3;
 
   return (
-      <Surface style={styles.root} mode="flat">
+      <PageLayout
+          title={event.title}
+          icon="arrow-left"
+          onIconPress={() => router.back()}
+      >
         <ScrollView
             contentContainerStyle={[
               styles.content,
-              {
-                paddingBottom: insets.bottom + Spacing.four,
-              },
+              {paddingBottom: Spacing.four},
             ]}
             showsVerticalScrollIndicator={false}
         >
@@ -51,11 +52,6 @@ export default function EventDetailScreen() {
           <Chip compact style={styles.categoryBadge} textStyle={styles.categoryText}>
             {event.category}
           </Chip>
-
-          {/* Заголовок */}
-          <Text variant="headlineMedium" style={styles.title}>
-            {event.title}
-          </Text>
 
           {/* Дата + адрес */}
           <Surface elevation={1} style={styles.infoCard}>
@@ -145,12 +141,11 @@ export default function EventDetailScreen() {
             {isFull ? 'Мест нет' : 'Записаться'}
           </Button>
         </ScrollView>
-      </Surface>
+      </PageLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {flex: 1},
   centered: {flex: 1, justifyContent: 'center', alignItems: 'center'},
   content: {
     maxWidth: MaxContentWidth,
@@ -172,10 +167,6 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.two,
   },
   categoryText: {color: '#FFFFFF', fontSize: 12},
-  title: {
-    fontWeight: '700',
-    marginBottom: Spacing.three,
-  },
   infoCard: {
     borderRadius: Spacing.three,
     padding: Spacing.three,

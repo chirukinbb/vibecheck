@@ -17,11 +17,6 @@ export default function RootLayout() {
                 <Stack.Screen name="(tabs)"/>
                 <Stack.Screen
                     name="event/[id]"
-                    options={{
-                        headerShown: true,
-                        headerTitle: 'Событие',
-                        presentation: 'card',
-                    }}
                 />
             </Stack>
         </PaperProvider>

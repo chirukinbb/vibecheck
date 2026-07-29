@@ -3,14 +3,13 @@ import {router} from 'expo-router';
 import {useState} from 'react';
 import {KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View} from 'react-native';
 import {Avatar, Button, Chip, Surface, Text, TextInput, useTheme,} from 'react-native-paper';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
+import PageLayout from '@/components/page-layout';
 import {AVAILABLE_LANGUAGES, MOCK_CATEGORIES, MOCK_FILTER, MOCK_PROFILE,} from '@/constants/mock-data';
 import {MaxContentWidth, Spacing} from '@/constants/theme';
 
 export default function ProfileScreen() {
   const theme = useTheme();
-  const insets = useSafeAreaInsets();
 
   // ─── Профиль ─────────────────────────────────────────────────
   const [name, setName] = useState(MOCK_PROFILE.name);
@@ -58,7 +57,7 @@ export default function ProfileScreen() {
   };
 
   return (
-      <Surface style={styles.root} mode="flat">
+      <PageLayout title="Профиль">
         <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.flex}
@@ -66,17 +65,11 @@ export default function ProfileScreen() {
           <ScrollView
               contentContainerStyle={[
                 styles.content,
-                {
-                  paddingTop: insets.top + Spacing.three,
-                  paddingBottom: insets.bottom + 100,
-                },
+                {paddingTop: Spacing.three, paddingBottom: 100},
               ]}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
           >
-            <Text variant="headlineMedium" style={styles.pageTitle}>
-              Профиль
-            </Text>
 
             {/* Аватар */}
             <View style={styles.avatarRow}>
@@ -211,22 +204,17 @@ export default function ProfileScreen() {
             </Button>
           </ScrollView>
         </KeyboardAvoidingView>
-      </Surface>
+      </PageLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {flex: 1},
   flex: {flex: 1},
   content: {
     maxWidth: MaxContentWidth,
     alignSelf: 'center',
     width: '100%',
     paddingHorizontal: Spacing.three,
-  },
-  pageTitle: {
-    fontWeight: '700',
-    paddingBottom: Spacing.three,
   },
   avatarRow: {
     alignItems: 'center',

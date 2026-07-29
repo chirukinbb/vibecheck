@@ -2,7 +2,7 @@
 import {router} from 'expo-router';
 import {useState} from 'react';
 import {KeyboardAvoidingView, Platform, StyleSheet, View} from 'react-native';
-import {Button, SegmentedButtons, Surface, Text, TextInput, useTheme,} from 'react-native-paper';
+import {Button, Divider, SegmentedButtons, Surface, Text, TextInput, useTheme,} from 'react-native-paper';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {MOCK_AUTH_RESPONSE} from '@/constants/mock-data';
@@ -91,11 +91,11 @@ export default function LoginScreen() {
 
             {/* Разделитель */}
             <View style={styles.dividerRow}>
-              <View style={[styles.dividerLine, {backgroundColor: theme.colors.outline}]}/>
+              <Divider/>
               <Text variant="bodyMedium" style={{color: theme.colors.onSurfaceVariant}}>
                 или
               </Text>
-              <View style={[styles.dividerLine, {backgroundColor: theme.colors.outline}]}/>
+              <Divider/>
             </View>
 
             {/* OAuth-кнопки */}
@@ -149,7 +149,6 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
     width: '100%',
   },
-  dividerLine: {flex: 1, height: 1},
   oauthRow: {
     flexDirection: 'row',
     gap: Spacing.three,
