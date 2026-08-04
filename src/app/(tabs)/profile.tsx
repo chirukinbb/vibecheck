@@ -2,14 +2,20 @@
 import {router} from 'expo-router';
 import {useState} from 'react';
 import {KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View} from 'react-native';
-import {Avatar, Button, Chip, Surface, Text, TextInput, useTheme,} from 'react-native-paper';
+import {Avatar, Button, SegmentedButtons, Surface, Text, TextInput, useTheme} from 'react-native-paper';
 
+import MultiSelect from '@/components/multi-select';
 import PageLayout from '@/components/page-layout';
+import PhoneInput from '@/components/phone-input';
 import {AVAILABLE_LANGUAGES, MOCK_CATEGORIES, MOCK_FILTER, MOCK_PROFILE,} from '@/constants/mock-data';
 import {MaxContentWidth, Spacing} from '@/constants/theme';
+import {useSettingsStore} from '@/stores/settingsStore';
 
 export default function ProfileScreen() {
   const theme = useTheme();
+  const themeMode = useSettingsStore((state) => state.themeMode);
+  const setThemeMode = useSettingsStore((state) => state.setThemeMode);
+  const [activeTab, setActiveTab] = useState<'profile' | 'filter' | 'settings'>('profile');
 
   // ─── Профиль ─────────────────────────────────────────────────
   const [name, setName] = useState(MOCK_PROFILE.name);
@@ -31,18 +37,6 @@ export default function ProfileScreen() {
   const [selectedCategories, setSelectedCategories] = useState<number[]>(
       MOCK_FILTER.categories ?? [],
   );
-
-  const toggleLanguage = (code: string) => {
-    setLanguages((prev) =>
-        prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code],
-    );
-  };
-
-  const toggleCategory = (id: number) => {
-    setSelectedCategories((prev) =>
-        prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id],
-    );
-  };
 
   const handleSaveProfile = () => {
     console.log('Сохраняем профиль:', {name, phone, countryPhoneCode, countryPhoneIso, languages, bio});
@@ -80,117 +74,119 @@ export default function ProfileScreen() {
               />
             </View>
 
-            {/* Секция: Профиль */}
+            {/* Единая карточка с табами */}
             <Surface elevation={2} style={styles.section}>
-              <Text variant="labelLarge" style={styles.sectionTitle}>
-                Личные данные
-              </Text>
-
-              <TextInput
-                  mode="outlined"
-                  label="Имя"
-                  value={name}
-                  onChangeText={setName}
+              <SegmentedButtons
+                  value={activeTab}
+                  onValueChange={(v) => setActiveTab(v as 'profile' | 'filter' | 'settings')}
+                  style={styles.segmented}
+                  buttons={[
+                    {value: 'profile', label: 'Личная информация'},
+                    {value: 'filter', label: 'Фильтр'},
+                    {value: 'settings', label: 'Настройки'},
+                  ]}
               />
 
-              <TextInput
-                  mode="outlined"
-                  label="Телефон"
-                  value={phone}
-                  onChangeText={setPhone}
-                  keyboardType="phone-pad"
-              />
+              {activeTab === 'profile' && (
+                  <View style={styles.tabContent}>
+                    <TextInput
+                        mode="outlined"
+                        label="Имя"
+                        value={name}
+                        onChangeText={setName}
+                    />
 
-              <View style={styles.codeRow}>
-                <TextInput
-                    mode="outlined"
-                    label="Код страны"
-                    value={countryPhoneCode}
-                    onChangeText={setCountryPhoneCode}
-                    style={styles.codeInput}
-                />
-                <TextInput
-                    mode="outlined"
-                    label="ISO"
-                    value={countryPhoneIso}
-                    onChangeText={setCountryPhoneIso}
-                    style={styles.isoInput}
-                />
-              </View>
+                    <PhoneInput
+                        value={phone}
+                        onChangeText={setPhone}
+                        defaultCountryCode={countryPhoneCode}
+                        onCountryCodeChange={(_, iso) => setCountryPhoneIso(iso)}
+                    />
 
-              {/* Языки */}
-              <Text variant="labelLarge">Языки</Text>
-              <View style={styles.chipRow}>
-                {AVAILABLE_LANGUAGES.map((lang) => (
-                    <Chip
-                        key={lang.code}
-                        selected={languages.includes(lang.code)}
-                        onPress={() => toggleLanguage(lang.code)}
-                        showSelectedOverlay
-                        style={styles.chip}
-                    >
-                      {lang.label}
-                    </Chip>
-                ))}
-              </View>
+                    <TextInput
+                        mode="outlined"
+                        label="ISO"
+                        value={countryPhoneIso}
+                        onChangeText={setCountryPhoneIso}
+                        style={styles.isoInput}
+                    />
 
-              <TextInput
-                  mode="outlined"
-                  label="О себе"
-                  value={bio}
-                  onChangeText={setBio}
-                  multiline
-                  numberOfLines={3}
-                  placeholder="Расскажите о себе..."
-              />
+                    <MultiSelect
+                        label="Языки"
+                        options={AVAILABLE_LANGUAGES}
+                        selected={languages}
+                        onChange={setLanguages}
+                    />
 
-              <Button mode="contained" onPress={handleSaveProfile}>
-                Сохранить профиль
-              </Button>
-            </Surface>
+                    <TextInput
+                        mode="outlined"
+                        label="О себе"
+                        value={bio}
+                        onChangeText={setBio}
+                        multiline
+                        numberOfLines={3}
+                        placeholder="Расскажите о себе..."
+                    />
 
-            {/* Секция: Фильтр */}
-            <Surface elevation={2} style={styles.section}>
-              <Text variant="labelLarge" style={styles.sectionTitle}>
-                Гео-фильтр
-              </Text>
+                    <Button mode="contained" onPress={handleSaveProfile}>
+                      Сохранить профиль
+                    </Button>
+                  </View>
+              )}
 
-              <TextInput
-                  mode="outlined"
-                  label="Адрес"
-                  value={filterAddress}
-                  onChangeText={setFilterAddress}
-                  placeholder="Москва"
-              />
+              {activeTab === 'filter' && (
+                  <View style={styles.tabContent}>
+                    <TextInput
+                        mode="outlined"
+                        label="Адрес"
+                        value={filterAddress}
+                        onChangeText={setFilterAddress}
+                        placeholder="Москва"
+                    />
 
-              <TextInput
-                  mode="outlined"
-                  label="Радиус (км)"
-                  value={radius}
-                  onChangeText={setRadius}
-                  keyboardType="numeric"
-                  placeholder="10"
-              />
+                    <TextInput
+                        mode="outlined"
+                        label="Радиус (км)"
+                        value={radius}
+                        onChangeText={setRadius}
+                        keyboardType="numeric"
+                        placeholder="10"
+                    />
 
-              {/* Категории фильтра */}
-              <Text variant="labelLarge">Категории</Text>
-              <View style={styles.chipRow}>
-                {MOCK_CATEGORIES.map((cat) => (
-                    <Chip
-                        key={cat.id}
-                        selected={selectedCategories.includes(cat.id)}
-                        onPress={() => toggleCategory(cat.id)}
-                        showSelectedOverlay
-                        style={styles.chip}
-                    >
-                      {cat.title}
-                    </Chip>
-                ))}
-              </View>
+                    {/* Категории фильтра */}
+                    <MultiSelect
+                        label="Категории"
+                        options={MOCK_CATEGORIES.map((cat) => ({
+                          code: cat.id,
+                          label: cat.title,
+                        }))}
+                        selected={selectedCategories}
+                        onChange={setSelectedCategories}
+                    />
 
-              <Button mode="contained" onPress={handleSaveFilter}>
-                Сохранить фильтр
-              </Button>
+                    <Button mode="contained" onPress={handleSaveFilter}>
+                      Сохранить фильтр
+                    </Button>
+                  </View>
+              )}
+
+              {activeTab === 'settings' && (
+                  <View style={styles.tabContent}>
+                    <Text variant="labelLarge" style={styles.sectionTitle}>
+                      Тема приложения
+                    </Text>
+                    <SegmentedButtons
+                        value={themeMode}
+                        onValueChange={(v) => setThemeMode(v as 'light' | 'dark' | 'system')}
+                        style={styles.segmented}
+                        buttons={[
+                          {value: 'system', label: 'Система'},
+                          {value: 'light', label: 'Светлая'},
+                          {value: 'dark', label: 'Тёмная'},
+                        ]}
+                    />
+                  </View>
+              )}
             </Surface>
 
             {/* Выход */}
@@ -227,9 +223,13 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
     marginBottom: Spacing.four,
   },
+  segmented: {marginBottom: Spacing.two},
   sectionTitle: {
     fontWeight: '700',
     paddingBottom: Spacing.one,
+  },
+  tabContent: {
+    gap: Spacing.three,
   },
   codeRow: {
     flexDirection: 'row',
@@ -237,12 +237,6 @@ const styles = StyleSheet.create({
   },
   codeInput: {flex: 2},
   isoInput: {flex: 1},
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.two,
-  },
-  chip: {borderRadius: Spacing.two},
   logoutBtn: {
     marginTop: Spacing.two,
     marginBottom: Spacing.four,

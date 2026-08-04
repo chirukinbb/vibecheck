@@ -1,9 +1,11 @@
 // src/stores/index.ts — реэкспорт всех хранилищ
 
 export {useAuthStore} from './authStore';
-export {useEventsStore} from './eventsStore';
 export {useCategoriesStore} from './categoriesStore';
-export {useProfileStore} from './profileStore';
-export {useFilterStore} from './filterStore';
-export {useFeedbackStore} from './feedbackStore';
 export {useDeviceStore} from './deviceStore';
+export {useEventsStore} from './eventsStore';
+export {useFeedbackStore} from './feedbackStore';
+export {useFilterStore} from './filterStore';
+export {useProfileStore} from './profileStore';
+export {useSettingsStore} from './settingsStore';
+
