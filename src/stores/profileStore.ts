@@ -1,7 +1,7 @@
 // src/stores/profileStore.ts — операции с профилем
 import {create} from 'zustand';
-import type {ProfileUpdateDTO} from '../types';
 import {updateProfile} from '../api/profile';
+import type {ProfileUpdateDTO} from '../types';
 import {useAuthStore} from './authStore';
 
 interface ProfileState {
@@ -28,6 +28,7 @@ export const useProfileStore = create<ProfileState>((set) => ({
         country_phone_iso: dto.country_phone_iso,
         languages: dto.languages,
         bio: dto.bio,
+        avatar: dto.avatar,
       });
       return res.message;
     } catch (e: any) {

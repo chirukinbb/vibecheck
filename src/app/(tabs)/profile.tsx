@@ -1,21 +1,24 @@
 // src/app/(tabs)/profile.tsx — профиль + фильтр
-import {router} from 'expo-router';
-import {useState} from 'react';
-import {KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View} from 'react-native';
-import {Avatar, Button, SegmentedButtons, Surface, Text, TextInput, useTheme} from 'react-native-paper';
-
 import MultiSelect from '@/components/multi-select';
 import PageLayout from '@/components/page-layout';
 import PhoneInput from '@/components/phone-input';
 import {AVAILABLE_LANGUAGES, MOCK_CATEGORIES, MOCK_FILTER, MOCK_PROFILE,} from '@/constants/mock-data';
 import {MaxContentWidth, Spacing} from '@/constants/theme';
 import {useSettingsStore} from '@/stores/settingsStore';
+import * as ImageManipulator from 'expo-image-manipulator';
+import * as ImagePicker from 'expo-image-picker';
+import {router} from 'expo-router';
+import {useState} from 'react';
+import {KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {Avatar, Button, SegmentedButtons, Surface, TextInput, useTheme} from 'react-native-paper';
+import * as Location from 'expo-location';
 
 export default function ProfileScreen() {
   const theme = useTheme();
   const themeMode = useSettingsStore((state) => state.themeMode);
   const setThemeMode = useSettingsStore((state) => state.setThemeMode);
   const [activeTab, setActiveTab] = useState<'profile' | 'filter' | 'settings'>('profile');
+  const [locationLoading, setLocationLoading] = useState(false);
 
   // ─── Профиль ─────────────────────────────────────────────────
   const [name, setName] = useState(MOCK_PROFILE.name);
@@ -30,6 +33,10 @@ export default function ProfileScreen() {
       MOCK_PROFILE.languages ?? ['ru', 'en'],
   );
   const [bio, setBio] = useState(MOCK_PROFILE.bio ?? '');
+  const [avatarUri, setAvatarUri] = useState<string | null>(MOCK_PROFILE.avatar);
+
+  // ─── Модал выбора источника ────────────────────────────
+  const [avatarModalVisible, setAvatarModalVisible] = useState(false);
 
   // ─── Фильтр ──────────────────────────────────────────────────
   const [filterAddress, setFilterAddress] = useState('Москва');
@@ -39,15 +46,104 @@ export default function ProfileScreen() {
   );
 
   const handleSaveProfile = () => {
-    console.log('Сохраняем профиль:', {name, phone, countryPhoneCode, countryPhoneIso, languages, bio});
+    console.log('Сохраняем профиль:', {
+      name,
+      phone,
+      countryPhoneCode,
+      countryPhoneIso,
+      languages,
+      bio,
+      avatar: avatarUri
+    });
   };
 
   const handleSaveFilter = () => {
     console.log('Сохраняем фильтр:', {address: filterAddress, radius: Number(radius), categories: selectedCategories});
   };
 
+  const handleUseCurrentLocation = async () => {
+    setLocationLoading(true);
+    try {
+      const {status} = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Нет доступа к геолокации');
+        return;
+      }
+      const position = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      const [address] = await Location.reverseGeocodeAsync({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      });
+      const parts = [
+        address.street,
+        address.streetNumber,
+        address.district,
+        address.city,
+        address.region,
+        address.country,
+      ].filter(Boolean);
+      setFilterAddress(parts.join(', ') || String(position.coords.latitude) + ', ' + String(position.coords.longitude));
+    } catch (e) {
+      alert('Не удалось определить местоположение');
+    } finally {
+      setLocationLoading(false);
+    }
+  };
+
   const handleLogout = () => {
     router.replace('/(auth)/login');
+  };
+
+  // ─── Аватар ────────────────────────────────────────────
+  const handleAvatarPress = () => setAvatarModalVisible(true);
+
+  const handlePickFromGallery = async () => {
+    setAvatarModalVisible(false);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets[0]) {
+        await convertToWebPAndSetAvatar(result.assets[0].uri);
+      }
+    } catch (e: any) {
+      console.warn('Ошибка выбора изображения:', e);
+    }
+  };
+
+  const handleTakePhoto = async () => {
+    setAvatarModalVisible(false);
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets[0]) {
+        await convertToWebPAndSetAvatar(result.assets[0].uri);
+      }
+    } catch (e: any) {
+      console.warn('Ошибка камеры:', e);
+    }
+  };
+
+  const convertToWebPAndSetAvatar = async (imagePath: string) => {
+    try {
+      const result = await ImageManipulator.manipulateAsync(
+          imagePath,
+          [{resize: {width: 300, height: 300}}],
+          {format: ImageManipulator.SaveFormat.WEBP, compress: 0.8},
+      );
+      setAvatarUri(result.uri);
+    } catch (e) {
+      console.warn('Ошибка конвертации в WebP:', e);
+    }
   };
 
   return (
@@ -66,13 +162,56 @@ export default function ProfileScreen() {
           >
 
             {/* Аватар */}
-            <View style={styles.avatarRow}>
-              <Avatar.Text
-                  size={80}
-                  label={name.charAt(0).toUpperCase()}
-                  style={{backgroundColor: theme.colors.primary}}
-              />
-            </View>
+            <Pressable onPress={handleAvatarPress} style={styles.avatarRow}>
+              {avatarUri ? (
+                  <Avatar.Image
+                      size={80}
+                      source={{uri: avatarUri}}
+                      style={{backgroundColor: theme.colors.primary}}
+                  />
+              ) : (
+                  <Avatar.Text
+                      size={80}
+                      label={name.charAt(0).toUpperCase()}
+                      style={{backgroundColor: theme.colors.primary}}
+                  />
+              )}
+            </Pressable>
+
+            {/* Модал выбора источника аватара — bottom sheet */}
+            <Modal
+                visible={avatarModalVisible}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setAvatarModalVisible(false)}
+            >
+              <Pressable
+                  style={styles.modalOverlay}
+                  onPress={() => setAvatarModalVisible(false)}
+              >
+                <Pressable style={styles.modalSheet} onPress={() => {
+                }}>
+                  <View style={styles.sheetHandle}/>
+                  <Text style={styles.modalTitle}>Выберите аватар</Text>
+                  <Button
+                      mode="contained"
+                      onPress={handlePickFromGallery}
+                      style={styles.modalButton}
+                      icon="image"
+                  >
+                    Галерея
+                  </Button>
+                  <Button
+                      mode="contained"
+                      onPress={handleTakePhoto}
+                      style={styles.modalButton}
+                      icon="camera"
+                  >
+                    Камера
+                  </Button>
+                </Pressable>
+              </Pressable>
+            </Modal>
 
             {/* Единая карточка с табами */}
             <Surface elevation={2} style={styles.section}>
@@ -101,14 +240,6 @@ export default function ProfileScreen() {
                         onChangeText={setPhone}
                         defaultCountryCode={countryPhoneCode}
                         onCountryCodeChange={(_, iso) => setCountryPhoneIso(iso)}
-                    />
-
-                    <TextInput
-                        mode="outlined"
-                        label="ISO"
-                        value={countryPhoneIso}
-                        onChangeText={setCountryPhoneIso}
-                        style={styles.isoInput}
                     />
 
                     <MultiSelect
@@ -142,6 +273,13 @@ export default function ProfileScreen() {
                         value={filterAddress}
                         onChangeText={setFilterAddress}
                         placeholder="Москва"
+                        right={
+                          <TextInput.Icon
+                              icon="crosshairs-gps"
+                              onPress={handleUseCurrentLocation}
+                              loading={locationLoading}
+                          />
+                        }
                     />
 
                     <TextInput
@@ -240,5 +378,40 @@ const styles = StyleSheet.create({
   logoutBtn: {
     marginTop: Spacing.two,
     marginBottom: Spacing.four,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: Spacing.three,
+    borderTopRightRadius: Spacing.three,
+    padding: Spacing.three,
+    gap: Spacing.two,
+    paddingBottom: Spacing.four,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: -2},
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+  },
+  sheetHandle: {
+    alignSelf: 'center',
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#D1D5DB',
+    marginBottom: Spacing.two,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: Spacing.one,
+  },
+  modalButton: {
+    width: '100%',
   },
 });
