@@ -1,12 +1,20 @@
 // src/app/(tabs)/create.tsx — создание события
+import DateTimePicker from '@/components/date-time-picker';
+import * as Location from 'expo-location';
 import {router} from 'expo-router';
 import {useState} from 'react';
-import {KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View} from 'react-native';
-import {Button, Chip, Surface, Text, TextInput, useTheme,} from 'react-native-paper';
+import {Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View} from 'react-native';
+import {Button, Chip, Modal, Portal, Searchbar, Surface, TextInput, useTheme} from 'react-native-paper';
 
+import ImagePickerWithCrop from '@/components/image-picker';
 import PageLayout from '@/components/page-layout';
-import {MOCK_CATEGORIES} from '@/constants/mock-data';
+import SingleSelect from '@/components/single-select';
+import {MOCK_CATEGORIES, MOCK_EVENTS} from '@/constants/mock-data';
 import {MaxContentWidth, Spacing} from '@/constants/theme';
+
+const SUGGESTED_TAGS = Array.from(
+    new Set(MOCK_EVENTS.flatMap((event) => event.tags?.map((t) => t.name) ?? [])),
+).sort();
 
 export default function CreateEventScreen() {
   const theme = useTheme();
@@ -15,10 +23,18 @@ export default function CreateEventScreen() {
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [address, setAddress] = useState('');
-  const [planingTime, setPlaningTime] = useState('');
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [planingTime, setPlaningTime] = useState<Date | null>(null);
   const [slots, setSlots] = useState('');
-  const [tags, setTags] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
+  const [tagModalVisible, setTagModalVisible] = useState(false);
+  const [tagQuery, setTagQuery] = useState('');
   const [thumbnail, setThumbnail] = useState<string | null>(null);
+
+  const handleThumbnailSelected = (uri: string) => {
+    setThumbnail(uri);
+  };
 
   const handleSubmit = () => {
     // Хардкод — просто логируем данные
@@ -27,12 +43,43 @@ export default function CreateEventScreen() {
       description,
       category_id: categoryId,
       address,
-      planing_time: planingTime,
+      planing_time: planingTime ? planingTime.toISOString() : null,
       slots: Number(slots),
-      tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
+      tags,
       thumbnail,
     });
     router.back();
+  };
+
+  const handleUseCurrentLocation = async () => {
+    setLocationLoading(true);
+    try {
+      const {status} = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Нет доступа к геолокации');
+        return;
+      }
+      const position = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      const [addr] = await Location.reverseGeocodeAsync({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      });
+      const parts = [
+        addr.street,
+        addr.streetNumber,
+        addr.district,
+        addr.city,
+        addr.region,
+        addr.country,
+      ].filter(Boolean);
+      setAddress(parts.join(', ') || String(position.coords.latitude) + ', ' + String(position.coords.longitude));
+    } catch (e) {
+      alert('Не удалось определить местоположение');
+    } finally {
+      setLocationLoading(false);
+    }
   };
 
   return (
@@ -72,20 +119,12 @@ export default function CreateEventScreen() {
               />
 
               {/* Категория */}
-              <Text variant="labelLarge">Категория</Text>
-              <View style={styles.chipRow}>
-                {MOCK_CATEGORIES.map((cat) => (
-                    <Chip
-                        key={cat.id}
-                        selected={categoryId === cat.id}
-                        onPress={() => setCategoryId(cat.id)}
-                        showSelectedOverlay
-                        style={styles.chip}
-                    >
-                      {cat.title}
-                    </Chip>
-                ))}
-              </View>
+              <SingleSelect<number>
+                  label="Категория"
+                  options={MOCK_CATEGORIES.map((cat) => ({code: cat.id, label: cat.title}))}
+                  selected={categoryId}
+                  onChange={(v) => setCategoryId(v as number | null)}
+              />
 
               {/* Адрес */}
               <TextInput
@@ -94,15 +133,20 @@ export default function CreateEventScreen() {
                   value={address}
                   onChangeText={setAddress}
                   placeholder="ул. Тверская, 15"
+                  right={
+                    <TextInput.Icon
+                        icon="crosshairs-gps"
+                        onPress={handleUseCurrentLocation}
+                        loading={locationLoading}
+                    />
+                  }
               />
 
               {/* Дата */}
-              <TextInput
-                  mode="outlined"
+              <DateTimePicker
                   label="Дата и время"
                   value={planingTime}
-                  onChangeText={setPlaningTime}
-                  placeholder="25/12/2026 19:00"
+                  onChange={(d) => setPlaningTime(d)}
               />
 
               {/* Места */}
@@ -116,30 +160,136 @@ export default function CreateEventScreen() {
               />
 
               {/* Теги */}
-              <TextInput
-                  mode="outlined"
-                  label="Теги (через запятую)"
-                  value={tags}
-                  onChangeText={setTags}
-                  placeholder="йога, здоровье, на природе"
-              />
+              <View style={styles.tagField}>
+                <Button
+                    mode="outlined"
+                    onPress={() => {
+                      setTagQuery('');
+                      setTagModalVisible(true);
+                    }}
+                    style={styles.tagSelectorButton}
+                >
+                  {tags.length > 0 ? `Теги (${tags.length})` : 'Выбрать теги'}
+                </Button>
+
+                <View style={styles.chipRow}>
+                  {tags.map((tag) => (
+                      <Chip
+                          key={tag}
+                          onPress={() => setTags(tags.filter((t) => t !== tag))}
+                          style={styles.chip}
+                          compact
+                      >
+                        #{tag}
+                      </Chip>
+                  ))}
+                </View>
+
+                <Portal>
+                  <Modal
+                      visible={tagModalVisible}
+                      onDismiss={() => setTagModalVisible(false)}
+                      contentContainerStyle={[
+                        styles.modal,
+                        {backgroundColor: theme.colors.surface},
+                      ]}
+                  >
+                    <Searchbar
+                        placeholder="Поиск тегов..."
+                        value={tagQuery}
+                        onChangeText={setTagQuery}
+                        style={styles.searchbar}
+                        autoFocus
+                    />
+
+                    <View style={styles.tagInputRow}>
+                      <TextInput
+                          mode="outlined"
+                          label="Новый тег"
+                          value={tagInput}
+                          onChangeText={setTagInput}
+                          placeholder="йога"
+                          style={styles.tagTextInput}
+                      />
+                      <Button
+                          mode="contained"
+                          onPress={() => {
+                            const nextTag = tagInput.trim();
+                            if (!nextTag) return;
+                            if (!tags.includes(nextTag)) {
+                              setTags([...tags, nextTag]);
+                            }
+                            setTagInput('');
+                          }}
+                          style={styles.addTagButton}
+                      >
+                        Добавить
+                      </Button>
+                    </View>
+
+                    <ScrollView style={styles.list} nestedScrollEnabled>
+                      {SUGGESTED_TAGS.filter((tag) =>
+                          tag.toLowerCase().includes(tagQuery.toLowerCase()),
+                      ).map((tag) => {
+                        const selected = tags.includes(tag);
+                        return (
+                            <Chip
+                                key={tag}
+                                mode={selected ? 'flat' : 'outlined'}
+                                selected={selected}
+                                onPress={() => {
+                                  if (selected) {
+                                    setTags(tags.filter((t) => t !== tag));
+                                  } else {
+                                    setTags([...tags, tag]);
+                                  }
+                                }}
+                                style={styles.modalChip}
+                                compact
+                            >
+                              #{tag}
+                            </Chip>
+                        );
+                      })}
+                    </ScrollView>
+
+                    <Button
+                        mode="contained"
+                        onPress={() => setTagModalVisible(false)}
+                        style={styles.doneButton}
+                    >
+                      Готово
+                    </Button>
+                  </Modal>
+                </Portal>
+              </View>
 
               {/* Обложка */}
               <View style={styles.coverRow}>
-                <Button
-                    mode="outlined"
-                    onPress={() =>
-                        setThumbnail(
-                            'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=600',
-                        )
-                    }
-                >
-                  {thumbnail ? 'Обложка выбрана' : 'Выбрать обложку'}
-                </Button>
-                {thumbnail && (
-                    <Button mode="text" onPress={() => setThumbnail(null)}>
-                      ✕
-                    </Button>
+                {thumbnail ? (
+                    <View style={styles.coverPreview}
+                          accessible
+                          accessibilityLabel="Обложка события"
+                          accessibilityHint="Нажмите, чтобы выбрать другую обложку">
+                      <Image source={{uri: thumbnail}} style={styles.coverImage}/>
+                      <Button mode="text" onPress={() => setThumbnail(null)}>
+                        ✕
+                      </Button>
+                    </View>
+                ) : (
+                    <ImagePickerWithCrop
+                        aspect={[16, 9]}
+                        onImageSelected={handleThumbnailSelected}
+                        title="Выберите обложку"
+                        maxWidth={1600}
+                        quality={0.8}
+                    >
+                      {({open}) => (
+                          <Button mode="outlined" onPress={open}>
+                            Выбрать обложку
+                          </Button>
+                      )}
+                    </ImagePickerWithCrop>
                 )}
               </View>
 
@@ -172,16 +322,44 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     gap: Spacing.three,
   },
+  tagField: {gap: Spacing.two},
+  tagInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  tagTextInput: {flex: 1},
+  addTagButton: {alignSelf: 'flex-end'},
+  tagSelectorButton: {alignSelf: 'flex-start'},
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.two,
   },
+  modal: {
+    margin: 24,
+    padding: 16,
+    borderRadius: 12,
+  },
+  searchbar: {marginBottom: 12},
+  list: {maxHeight: 220, flexGrow: 0},
+  modalChip: {borderRadius: Spacing.two, marginBottom: Spacing.two},
   chip: {borderRadius: Spacing.two},
+  doneButton: {marginTop: 12, alignSelf: 'flex-end'},
   coverRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
+  },
+  coverPreview: {
+    width: '100%',
+    borderRadius: Spacing.three,
+    overflow: 'hidden',
+    backgroundColor: '#000',
+  },
+  coverImage: {
+    width: '100%',
+    aspectRatio: 16 / 9,
   },
   submitBtn: {marginTop: Spacing.two},
 });

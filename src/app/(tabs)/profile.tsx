@@ -1,17 +1,16 @@
 // src/app/(tabs)/profile.tsx — профиль + фильтр
+import ImagePickerWithCrop from '@/components/image-picker';
 import MultiSelect from '@/components/multi-select';
 import PageLayout from '@/components/page-layout';
 import PhoneInput from '@/components/phone-input';
 import {AVAILABLE_LANGUAGES, MOCK_CATEGORIES, MOCK_FILTER, MOCK_PROFILE,} from '@/constants/mock-data';
 import {MaxContentWidth, Spacing} from '@/constants/theme';
 import {useSettingsStore} from '@/stores/settingsStore';
-import * as ImageManipulator from 'expo-image-manipulator';
-import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import {router} from 'expo-router';
 import {useState} from 'react';
-import {KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {Avatar, Button, SegmentedButtons, Surface, TextInput, useTheme} from 'react-native-paper';
-import * as Location from 'expo-location';
 
 export default function ProfileScreen() {
   const theme = useTheme();
@@ -36,7 +35,6 @@ export default function ProfileScreen() {
   const [avatarUri, setAvatarUri] = useState<string | null>(MOCK_PROFILE.avatar);
 
   // ─── Модал выбора источника ────────────────────────────
-  const [avatarModalVisible, setAvatarModalVisible] = useState(false);
 
   // ─── Фильтр ──────────────────────────────────────────────────
   const [filterAddress, setFilterAddress] = useState('Москва');
@@ -97,53 +95,8 @@ export default function ProfileScreen() {
   };
 
   // ─── Аватар ────────────────────────────────────────────
-  const handleAvatarPress = () => setAvatarModalVisible(true);
-
-  const handlePickFromGallery = async () => {
-    setAvatarModalVisible(false);
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-      if (!result.canceled && result.assets[0]) {
-        await convertToWebPAndSetAvatar(result.assets[0].uri);
-      }
-    } catch (e: any) {
-      console.warn('Ошибка выбора изображения:', e);
-    }
-  };
-
-  const handleTakePhoto = async () => {
-    setAvatarModalVisible(false);
-    try {
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-      if (!result.canceled && result.assets[0]) {
-        await convertToWebPAndSetAvatar(result.assets[0].uri);
-      }
-    } catch (e: any) {
-      console.warn('Ошибка камеры:', e);
-    }
-  };
-
-  const convertToWebPAndSetAvatar = async (imagePath: string) => {
-    try {
-      const result = await ImageManipulator.manipulateAsync(
-          imagePath,
-          [{resize: {width: 300, height: 300}}],
-          {format: ImageManipulator.SaveFormat.WEBP, compress: 0.8},
-      );
-      setAvatarUri(result.uri);
-    } catch (e) {
-      console.warn('Ошибка конвертации в WebP:', e);
-    }
+  const handleAvatarSelected = async (uri: string) => {
+    setAvatarUri(uri);
   };
 
   return (
@@ -162,56 +115,31 @@ export default function ProfileScreen() {
           >
 
             {/* Аватар */}
-            <Pressable onPress={handleAvatarPress} style={styles.avatarRow}>
-              {avatarUri ? (
-                  <Avatar.Image
-                      size={80}
-                      source={{uri: avatarUri}}
-                      style={{backgroundColor: theme.colors.primary}}
-                  />
-              ) : (
-                  <Avatar.Text
-                      size={80}
-                      label={name.charAt(0).toUpperCase()}
-                      style={{backgroundColor: theme.colors.primary}}
-                  />
-              )}
-            </Pressable>
-
-            {/* Модал выбора источника аватара — bottom sheet */}
-            <Modal
-                visible={avatarModalVisible}
-                transparent
-                animationType="slide"
-                onRequestClose={() => setAvatarModalVisible(false)}
+            <ImagePickerWithCrop
+                aspect={[1, 1]}
+                onImageSelected={handleAvatarSelected}
+                title="Выберите аватар"
+                maxWidth={300}
+                quality={0.8}
             >
-              <Pressable
-                  style={styles.modalOverlay}
-                  onPress={() => setAvatarModalVisible(false)}
-              >
-                <Pressable style={styles.modalSheet} onPress={() => {
-                }}>
-                  <View style={styles.sheetHandle}/>
-                  <Text style={styles.modalTitle}>Выберите аватар</Text>
-                  <Button
-                      mode="contained"
-                      onPress={handlePickFromGallery}
-                      style={styles.modalButton}
-                      icon="image"
-                  >
-                    Галерея
-                  </Button>
-                  <Button
-                      mode="contained"
-                      onPress={handleTakePhoto}
-                      style={styles.modalButton}
-                      icon="camera"
-                  >
-                    Камера
-                  </Button>
-                </Pressable>
-              </Pressable>
-            </Modal>
+              {({open}) => (
+                  <Pressable onPress={open} style={styles.avatarRow}>
+                    {avatarUri ? (
+                        <Avatar.Image
+                            size={80}
+                            source={{uri: avatarUri}}
+                            style={{backgroundColor: theme.colors.primary}}
+                        />
+                    ) : (
+                        <Avatar.Text
+                            size={80}
+                            label={name.charAt(0).toUpperCase()}
+                            style={{backgroundColor: theme.colors.primary}}
+                        />
+                    )}
+                  </Pressable>
+              )}
+            </ImagePickerWithCrop>
 
             {/* Единая карточка с табами */}
             <Surface elevation={2} style={styles.section}>
