@@ -1,4 +1,5 @@
 // src/app/(tabs)/profile.tsx — профиль + фильтр
+import AddressPicker from '@/components/address-picker';
 import ImagePickerWithCrop from '@/components/image-picker';
 import MultiSelect from '@/components/multi-select';
 import PageLayout from '@/components/page-layout';
@@ -195,20 +196,14 @@ export default function ProfileScreen() {
 
               {activeTab === 'filter' && (
                   <View style={styles.tabContent}>
-                    <TextInput
-                        mode="outlined"
-                        label="Адрес"
-                        value={filterAddress}
-                        onChangeText={setFilterAddress}
-                        placeholder="Москва"
-                        right={
-                          <TextInput.Icon
-                              icon="crosshairs-gps"
-                              onPress={handleUseCurrentLocation}
-                              loading={locationLoading}
-                          />
-                        }
-                    />
+                      <AddressPicker
+                          label="Адрес"
+                          placeholder="Москва"
+                          value={filterAddress}
+                          onChangeText={setFilterAddress}
+                          onUseCurrentLocation={handleUseCurrentLocation}
+                          locationLoading={locationLoading}
+                      />
 
                     <TextInput
                         mode="outlined"

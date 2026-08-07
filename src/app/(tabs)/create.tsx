@@ -6,6 +6,7 @@ import {useState} from 'react';
 import {Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View} from 'react-native';
 import {Button, Chip, Modal, Portal, Searchbar, Surface, TextInput, useTheme} from 'react-native-paper';
 
+import AddressPicker from '@/components/address-picker';
 import ImagePickerWithCrop from '@/components/image-picker';
 import PageLayout from '@/components/page-layout';
 import SingleSelect from '@/components/single-select';
@@ -127,19 +128,13 @@ export default function CreateEventScreen() {
               />
 
               {/* Адрес */}
-              <TextInput
-                  mode="outlined"
+              <AddressPicker
                   label="Адрес"
+                  placeholder="ул. Тверская, 15"
                   value={address}
                   onChangeText={setAddress}
-                  placeholder="ул. Тверская, 15"
-                  right={
-                    <TextInput.Icon
-                        icon="crosshairs-gps"
-                        onPress={handleUseCurrentLocation}
-                        loading={locationLoading}
-                    />
-                  }
+                  onUseCurrentLocation={handleUseCurrentLocation}
+                  locationLoading={locationLoading}
               />
 
               {/* Дата */}
