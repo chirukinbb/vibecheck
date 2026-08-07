@@ -1,17 +1,66 @@
 // src/app/event/[id].tsx — детальная страница события
 import {router, useLocalSearchParams} from 'expo-router';
-import {ScrollView, StyleSheet, View} from 'react-native';
-import {Avatar, Button, Card, Chip, ProgressBar, Surface, Text, useTheme,} from 'react-native-paper';
+import {useState} from 'react';
+import {Image, ScrollView, StyleSheet, View} from 'react-native';
+import {
+  ActivityIndicator,
+  Avatar,
+  Button,
+  Card,
+  Chip,
+  Modal,
+  Portal,
+  ProgressBar,
+  Surface,
+  Text,
+  useTheme,
+} from 'react-native-paper';
 
 import PageLayout from '@/components/page-layout';
 import {formatDate, getEventById} from '@/constants/mock-data';
 import {MaxContentWidth, Spacing} from '@/constants/theme';
+
+const TOMTOM_API_KEY = process.env.EXPO_PUBLIC_TOMTOM_API_KEY || process.env.TOMTOM_API_KEY || 'BHEiGUcbB06ofsGybuUFTFReGMYYkoy9';
 
 export default function EventDetailScreen() {
   const {id} = useLocalSearchParams<{ id: string }>();
   const theme = useTheme();
 
   const event = getEventById(Number(id));
+  const address = event?.address ?? '';
+  const [mapVisible, setMapVisible] = useState(false);
+  const [mapUrl, setMapUrl] = useState<string | null>(null);
+  const [mapLoading, setMapLoading] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
+
+  const openMapModal = async () => {
+    setMapVisible(true);
+    if (mapUrl || mapLoading || !address) return;
+    setMapLoading(true);
+    setMapError(null);
+
+    try {
+      const response = await fetch(
+          `https://api.tomtom.com/search/2/search/${encodeURIComponent(address)}.json?key=${TOMTOM_API_KEY}&language=ru-RU&limit=1`,
+      );
+      if (!response.ok) {
+        throw new Error('TomTom request failed');
+      }
+      const data = await response.json();
+      const position = data.results?.[0]?.position;
+      if (!position?.lat || !position?.lon) {
+        throw new Error('Не удалось найти координаты адреса');
+      }
+      const {lat, lon} = position;
+      setMapUrl(
+          `https://api.tomtom.com/map/1/staticimage?layer=basic&style=main&zoom=15&width=700&height=400&center=${lon},${lat}&format=png&key=${TOMTOM_API_KEY}&pois=${lon},${lat}`,
+      );
+    } catch (error) {
+      setMapError('Не удалось загрузить карту');
+    } finally {
+      setMapLoading(false);
+    }
+  };
 
   if (!event) {
     return (
@@ -64,10 +113,19 @@ export default function EventDetailScreen() {
 
             <View style={styles.infoRow}>
               <Text variant="labelLarge">📍 Адрес</Text>
-              <Text variant="bodyMedium" style={{color: theme.colors.onSurfaceVariant}}>
+              <Text
+                  variant="bodyMedium"
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                  style={[styles.addressText, {color: theme.colors.onSurfaceVariant}]}
+              >
                 {event.address}
               </Text>
             </View>
+
+            <Button mode="outlined" onPress={openMapModal} compact style={styles.mapButton}>
+              Посмотреть на карте
+            </Button>
 
             <View style={styles.infoRow}>
               <Text variant="labelLarge">
@@ -131,6 +189,37 @@ export default function EventDetailScreen() {
             </View>
           </Surface>
 
+          <Portal>
+            <Modal
+                visible={mapVisible}
+                onDismiss={() => setMapVisible(false)}
+                contentContainerStyle={[styles.modal, {backgroundColor: theme.colors.surface}]}
+            >
+              <Text variant="titleMedium" style={styles.modalTitle}>
+                Адрес на карте
+              </Text>
+              <Text variant="bodyMedium" style={styles.modalAddress}>
+                {event.address}
+              </Text>
+              {mapLoading && (
+                  <View style={styles.modalLoader}>
+                    <ActivityIndicator animating size="large"/>
+                  </View>
+              )}
+              {mapError && (
+                  <Text variant="bodyMedium" style={styles.errorText}>
+                    {mapError}
+                  </Text>
+              )}
+              {!mapLoading && mapUrl && (
+                  <Image source={{uri: mapUrl}} style={styles.mapImage}/>
+              )}
+              <Button mode="contained" onPress={() => setMapVisible(false)} style={styles.closeMapButton}>
+                Закрыть
+              </Button>
+            </Modal>
+          </Portal>
+
           {/* Кнопка записи */}
           <Button
               mode="contained"
@@ -178,6 +267,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  addressText: {
+    maxWidth: '50%',
+  },
+  mapButton: {
+    alignSelf: 'flex-start',
+    marginTop: -Spacing.two,
+    marginBottom: Spacing.two,
+    paddingHorizontal: Spacing.two,
+  },
   progressBar: {
     height: 8,
     borderRadius: 4,
@@ -206,6 +304,37 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   authorInfo: {flex: 1, gap: Spacing.half},
+  closeMapButton: {
+    marginTop: Spacing.three,
+  },
+  mapImage: {
+    width: '100%',
+    height: 220,
+    borderRadius: Spacing.three,
+    marginTop: Spacing.two,
+  },
+  modal: {
+    margin: 24,
+    padding: Spacing.three,
+    borderRadius: Spacing.three,
+  },
+  modalTitle: {
+    marginBottom: Spacing.one,
+    fontWeight: '700',
+  },
+  modalAddress: {
+    marginBottom: Spacing.two,
+    color: '#6a6a6a',
+  },
+  modalLoader: {
+    minHeight: 220,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    color: '#B00020',
+    marginBottom: Spacing.two,
+  },
   subscribeBtn: {
     marginTop: Spacing.two,
     marginBottom: Spacing.four,
