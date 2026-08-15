@@ -1,26 +1,24 @@
 // src/types/index.ts — реэкспорт всех типов
 
 export type {
-    SuccessResponse,
-    ErrorResponse,
-    ApiResponse,
-    PaginatedResponse,
+    ApiResponse, ErrorResponse, PaginatedResponse,
     PaginationLinks,
-    PaginationMeta,
+    PaginationMeta, SuccessResponse
 } from './common';
 
-export type {AuthProvider, AuthCallbackResponse} from './auth';
+export type {
+    AuthCallbackResponse, AuthProvider, LoginCredentials,
+    RegisterCredentials
+} from './auth';
 
 export type {Profile, ProfileUpdateDTO} from './profile';
 
-export type {GeoCenter, GeoFilter, FilterUpdateDTO} from './filter';
+export type {FilterUpdateDTO, GeoCenter, GeoFilter} from './filter';
 
 export type {
-    Event,
+    CreateEventDTO, Event,
     EventAuthor,
-    Tag,
-    CreateEventDTO,
-    UpdateEventDTO,
+    Tag, UpdateEventDTO
 } from './event';
 
 export type {Category} from './category';
@@ -32,7 +30,7 @@ export type {CreateFeedbackDTO} from './feedback';
 export type {DeviceTokenDTO} from './device';
 
 export type {
-    RefreshNotificationData,
     EventNotificationData,
-    FcmPayload,
+    FcmPayload, RefreshNotificationData
 } from './fcm';
+

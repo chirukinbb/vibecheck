@@ -6,7 +6,7 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {Spacing} from '@/constants/theme';
 
 interface PageLayoutProps {
-  title: string;
+  title?: string;
   children: React.ReactNode;
   icon?: string;
   onIconPress?: () => void;
@@ -22,13 +22,15 @@ export default function PageLayout({title, children, icon, onIconPress}: PageLay
           {icon && (
               <Appbar.Action icon={icon} onPress={onIconPress}/>
           )}
-          <Appbar.Content
-              title={title}
-              titleStyle={[
-                styles.appbarTitle,
-                {color: theme.colors.onSurface},
-              ]}
-          />
+          {title ? (
+              <Appbar.Content
+                  title={title}
+                  titleStyle={[
+                    styles.appbarTitle,
+                    {color: theme.colors.onSurface},
+                  ]}
+              />
+          ) : null}
         </Appbar.Header>
 
         <View style={styles.content}>{children}</View>

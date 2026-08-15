@@ -7,6 +7,7 @@ export interface EventAuthor {
     country_phone_code: string;
     languages: string[];
     bio: string;
+    avatar?: string;
 }
 
 /** Событие (из GET /api/v1/events и GET /api/v1/event/{id}) */

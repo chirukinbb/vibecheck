@@ -1,21 +1,23 @@
 // src/api/index.ts — реэкспорт всех API-модулей
 
 // HTTP-клиент
-export {apiClient, API_URL} from './client';
+export {API_URL, apiClient} from './client';
 
-// OAuth
-export {getOAuthRedirectUrl, getOAuthCallbackUrl, handleOAuthCallback} from './auth';
+// Auth
+export {
+    getCurrentUser,
+    getOAuthCallbackUrl,
+    getOAuthRedirectUrl,
+    handleOAuthCallback,
+    loginWithEmail,
+    loginWithOAuth,
+    registerWithEmail
+} from './auth';
 
 // События
 export {
-    getEvents,
-    getEvent,
-    createEvent,
-    updateEvent,
-    deleteEvent,
-    subscribeToEvent,
-    unsubscribeFromEvent,
-    submitMemberFeedback,
+    createEvent, deleteEvent, getEvent, getEvents, submitMemberFeedback, subscribeToEvent,
+    unsubscribeFromEvent, updateEvent
 } from './events';
 
 // Категории
@@ -32,3 +34,4 @@ export {sendFeedback} from './feedback';
 
 // FCM-токен
 export {updateDeviceToken} from './device';
+

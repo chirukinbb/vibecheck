@@ -5,6 +5,7 @@ import {router} from 'expo-router';
 import {useState} from 'react';
 import {Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View} from 'react-native';
 import {Button, Chip, Modal, Portal, Searchbar, Surface, TextInput, useTheme} from 'react-native-paper';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import AddressPicker from '@/components/address-picker';
 import ImagePickerWithCrop from '@/components/image-picker';
@@ -83,30 +84,33 @@ export default function CreateEventScreen() {
     }
   };
 
+  const insets = useSafeAreaInsets();
+
   return (
       <PageLayout title="Новое событие">
-        <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={styles.flex}
-        >
-          <ScrollView
-              contentContainerStyle={[
-                styles.content,
-                {paddingTop: Spacing.three, paddingBottom: 100},
-              ]}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
+        <View style={styles.screen}>
+          <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              style={styles.flex}
           >
+            <ScrollView
+                contentContainerStyle={[
+                  styles.content,
+                  {paddingTop: Spacing.three, paddingBottom: Spacing.five + insets.bottom},
+                ]}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+            >
 
-            <Surface elevation={2} style={styles.form}>
-              {/* Название */}
-              <TextInput
-                  mode="outlined"
-                  label="Название"
-                  value={title}
-                  onChangeText={setTitle}
-                  placeholder="Например: Йога на крыше"
-              />
+              <Surface elevation={2} style={styles.form}>
+                {/* Название */}
+                <TextInput
+                    mode="outlined"
+                    label="Название"
+                    value={title}
+                    onChangeText={setTitle}
+                    placeholder="Например: Йога на крыше"
+                />
 
               {/* Описание */}
               <TextInput
@@ -288,24 +292,29 @@ export default function CreateEventScreen() {
                 )}
               </View>
 
-              {/* Сабмит */}
-              <Button
-                  mode="contained"
-                  onPress={handleSubmit}
-                  disabled={!title || !categoryId || !address || !slots}
-                  style={styles.submitBtn}
-              >
-                Создать событие
-              </Button>
-            </Surface>
-          </ScrollView>
-        </KeyboardAvoidingView>
+                {/* Сабмит */}
+                <Button
+                    mode="contained"
+                    onPress={handleSubmit}
+                    disabled={!title || !categoryId || !address || !slots}
+                    style={styles.submitBtn}
+                >
+                  Создать событие
+                </Button>
+              </Surface>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </View>
       </PageLayout>
   );
 }
 
 const styles = StyleSheet.create({
   flex: {flex: 1},
+  screen: {
+    flex: 1,
+    backgroundColor: '#FAFBFF',
+  },
   content: {
     maxWidth: MaxContentWidth,
     alignSelf: 'center',
@@ -316,6 +325,9 @@ const styles = StyleSheet.create({
     borderRadius: Spacing.three,
     padding: Spacing.three,
     gap: Spacing.three,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E6E9F2',
   },
   tagField: {gap: Spacing.two},
   tagInputRow: {

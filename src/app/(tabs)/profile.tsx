@@ -12,6 +12,7 @@ import {router} from 'expo-router';
 import {useState} from 'react';
 import {KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {Avatar, Button, SegmentedButtons, Surface, TextInput, useTheme} from 'react-native-paper';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 export default function ProfileScreen() {
   const theme = useTheme();
@@ -100,60 +101,73 @@ export default function ProfileScreen() {
     setAvatarUri(uri);
   };
 
+  const insets = useSafeAreaInsets();
+
   return (
       <PageLayout title="Профиль">
-        <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={styles.flex}
-        >
-          <ScrollView
-              contentContainerStyle={[
-                styles.content,
-                {paddingTop: Spacing.three, paddingBottom: 100},
-              ]}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
+        <View style={styles.screen}>
+          <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              style={styles.flex}
           >
-
-            {/* Аватар */}
-            <ImagePickerWithCrop
-                aspect={[1, 1]}
-                onImageSelected={handleAvatarSelected}
-                title="Выберите аватар"
-                maxWidth={300}
-                quality={0.8}
+            <ScrollView
+                contentContainerStyle={[
+                  styles.content,
+                  {paddingTop: Spacing.three, paddingBottom: Spacing.five + insets.bottom},
+                ]}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
             >
-              {({open}) => (
-                  <Pressable onPress={open} style={styles.avatarRow}>
-                    {avatarUri ? (
-                        <Avatar.Image
-                            size={80}
-                            source={{uri: avatarUri}}
-                            style={{backgroundColor: theme.colors.primary}}
-                        />
-                    ) : (
-                        <Avatar.Text
-                            size={80}
-                            label={name.charAt(0).toUpperCase()}
-                            style={{backgroundColor: theme.colors.primary}}
-                        />
-                    )}
-                  </Pressable>
-              )}
-            </ImagePickerWithCrop>
 
-            {/* Единая карточка с табами */}
-            <Surface elevation={2} style={styles.section}>
-              <SegmentedButtons
-                  value={activeTab}
-                  onValueChange={(v) => setActiveTab(v as 'profile' | 'filter' | 'settings')}
-                  style={styles.segmented}
-                  buttons={[
-                    {value: 'profile', label: 'Личная информация'},
-                    {value: 'filter', label: 'Фильтр'},
-                    {value: 'settings', label: 'Настройки'},
-                  ]}
-              />
+              <Surface elevation={2} style={styles.profileCard}>
+                <ImagePickerWithCrop
+                    aspect={[1, 1]}
+                    onImageSelected={handleAvatarSelected}
+                    title="Выберите аватар"
+                    maxWidth={300}
+                    quality={0.8}
+                >
+                  {({open}) => (
+                      <Pressable onPress={open} style={styles.avatarRow}>
+                        {avatarUri ? (
+                            <Avatar.Image
+                                size={80}
+                                source={{uri: avatarUri}}
+                                style={styles.authorAvatar}
+                            />
+                        ) : (
+                            <Avatar.Text
+                                size={80}
+                                label={name.charAt(0).toUpperCase()}
+                                style={styles.authorAvatar}
+                                labelStyle={styles.avatarLabel}
+                            />
+                        )}
+                      </Pressable>
+                  )}
+                </ImagePickerWithCrop>
+                <View style={styles.profileInfo}>
+                  <Text variant="titleMedium" style={styles.profileName}>
+                    {name}
+                  </Text>
+                  <Text variant="bodyMedium" style={styles.profileSubtitle} numberOfLines={2}>
+                    {bio || 'Расскажите о себе...'}
+                  </Text>
+                </View>
+              </Surface>
+
+              {/* Единая карточка с табами */}
+              <Surface elevation={2} style={styles.section}>
+                <SegmentedButtons
+                    value={activeTab}
+                    onValueChange={(v) => setActiveTab(v as 'profile' | 'filter' | 'settings')}
+                    style={styles.segmented}
+                    buttons={[
+                      {value: 'profile', label: 'Личная информация'},
+                      {value: 'filter', label: 'Фильтр'},
+                      {value: 'settings', label: 'Настройки'},
+                    ]}
+                />
 
               {activeTab === 'profile' && (
                   <View style={styles.tabContent}>
@@ -250,39 +264,62 @@ export default function ProfileScreen() {
               )}
             </Surface>
 
-            {/* Выход */}
-            <Button
-                mode="outlined"
-                textColor={theme.colors.error}
-                onPress={handleLogout}
-                style={styles.logoutBtn}
-            >
-              Выйти
-            </Button>
-          </ScrollView>
-        </KeyboardAvoidingView>
+              <Button
+                  mode="outlined"
+                  textColor={theme.colors.error}
+                  onPress={handleLogout}
+                  style={styles.logoutBtn}
+              >
+                Выйти
+              </Button>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </View>
       </PageLayout>
   );
 }
 
 const styles = StyleSheet.create({
   flex: {flex: 1},
+  screen: {
+    flex: 1,
+    backgroundColor: '#FAFBFF',
+  },
   content: {
     maxWidth: MaxContentWidth,
     alignSelf: 'center',
     width: '100%',
     paddingHorizontal: Spacing.three,
   },
+  profileCard: {
+    borderRadius: Spacing.three,
+    padding: Spacing.four,
+    gap: Spacing.three,
+    marginBottom: Spacing.three,
+    backgroundColor: '#FFFFFF',
+  },
   avatarRow: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingBottom: Spacing.four,
+  },
+  profileInfo: {
+    gap: Spacing.one,
+  },
+  profileName: {
+    fontWeight: '700',
+  },
+  profileSubtitle: {
+    color: '#6A6A6A',
   },
   section: {
     borderRadius: Spacing.three,
     padding: Spacing.three,
     gap: Spacing.three,
     marginBottom: Spacing.four,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E6E9F2',
   },
   segmented: {marginBottom: Spacing.two},
   sectionTitle: {
@@ -300,41 +337,6 @@ const styles = StyleSheet.create({
   isoInput: {flex: 1},
   logoutBtn: {
     marginTop: Spacing.two,
-    marginBottom: Spacing.four,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalSheet: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: Spacing.three,
-    borderTopRightRadius: Spacing.three,
-    padding: Spacing.three,
-    gap: Spacing.two,
-    paddingBottom: Spacing.four,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: -2},
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-  },
-  sheetHandle: {
-    alignSelf: 'center',
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#D1D5DB',
-    marginBottom: Spacing.two,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: Spacing.one,
-  },
-  modalButton: {
     width: '100%',
   },
 });

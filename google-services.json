@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1063270112391",
+    "project_id": "events-94e93",
+    "storage_bucket": "events-94e93.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1063270112391:android:bee6fbb58649d51b9f2c22",
+        "android_client_info": {
+          "package_name": "com.chirukinbb.events"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyByYB_rZcwT8Jqx3dHGOH0Q2by5ocPkD0s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

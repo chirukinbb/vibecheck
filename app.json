@@ -5,15 +5,18 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "eventsmobile",
+    "scheme": "events",
     "userInterfaceStyle": "automatic",
     "ios": {
+      "bundleIdentifier": "com.chirukinbb.events",
       "icon": "./assets/expo.icon",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "App needs location access to find events near you"
       }
     },
     "android": {
+      "package": "com.chirukinbb.events",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -49,6 +52,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "9d2e5e9f-842f-458f-a24b-d58f321fbc64"
+      }
     }
   }
 }

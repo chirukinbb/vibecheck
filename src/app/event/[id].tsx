@@ -15,6 +15,7 @@ import {
   Text,
   useTheme,
 } from 'react-native-paper';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import PageLayout from '@/components/page-layout';
 import {formatDate, getEventById} from '@/constants/mock-data';
@@ -27,6 +28,7 @@ export default function EventDetailScreen() {
   const theme = useTheme();
 
   const event = getEventById(Number(id));
+  const insets = useSafeAreaInsets();
   const address = event?.address ?? '';
   const [mapVisible, setMapVisible] = useState(false);
   const [mapUrl, setMapUrl] = useState<string | null>(null);
@@ -77,75 +79,74 @@ export default function EventDetailScreen() {
   const slotsLeft = event.slots - event.reserved;
   const isFull = slotsLeft <= 0;
   const isAlmostFull = slotsLeft <= 3;
+  const occupancyText = isFull ? 'Мест нет' : `${slotsLeft} свободно`;
+  const formattedDate = formatDate(event.planing_time);
 
   return (
       <PageLayout
-          title={event.title}
           icon="arrow-left"
           onIconPress={() => router.back()}
+          title="Назад"
       >
-        <ScrollView
-            contentContainerStyle={[
-              styles.content,
-              {paddingBottom: Spacing.four},
-            ]}
-            showsVerticalScrollIndicator={false}
-        >
-          {/* Обложка */}
-          <Card.Cover
-              source={{uri: event.thumbnail_url}}
-              style={styles.cover}
-          />
-
-          {/* Категория */}
-          <Chip compact style={styles.categoryBadge} textStyle={styles.categoryText}>
-            {event.category}
-          </Chip>
-
-          {/* Дата + адрес */}
-          <Surface elevation={1} style={styles.infoCard}>
-            <View style={styles.infoRow}>
-              <Text variant="labelLarge">📅 Дата</Text>
-              <Text variant="bodyMedium" style={{color: theme.colors.onSurfaceVariant}}>
-                {formatDate(event.planing_time)}
-              </Text>
-            </View>
-
-            <View style={styles.infoRow}>
-              <Text variant="labelLarge">📍 Адрес</Text>
-              <Text
-                  variant="bodyMedium"
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                  style={[styles.addressText, {color: theme.colors.onSurfaceVariant}]}
-              >
-                {event.address}
-              </Text>
-            </View>
-
-            <Button mode="outlined" onPress={openMapModal} compact style={styles.mapButton}>
-              Посмотреть на карте
-            </Button>
-
-            <View style={styles.infoRow}>
-              <Text variant="labelLarge">
-                👥 Места ({event.reserved}/{event.slots})
-              </Text>
-              <Text
-                  variant="labelLarge"
-                  style={{
-                    color: isAlmostFull ? theme.colors.error : theme.colors.primary,
-                  }}
-              >
-                {isFull ? 'Мест нет' : `${slotsLeft} свободно`}
-              </Text>
-            </View>
-
-            <ProgressBar
-                progress={event.reserved / event.slots}
-                color={isFull ? theme.colors.error : theme.colors.primary}
-                style={styles.progressBar}
+        <View style={styles.screen}>
+          <ScrollView
+              contentContainerStyle={[
+                styles.content,
+                {paddingBottom: Spacing.six + insets.bottom},
+              ]}
+              showsVerticalScrollIndicator={false}
+          >
+            {/* Обложка */}
+            <Card.Cover
+                source={{uri: event.thumbnail_url}}
+                style={styles.cover}
             />
+
+            <Chip compact style={styles.categoryBadge} textStyle={styles.categoryText}>
+              {event.category}
+            </Chip>
+
+            <Text variant="headlineSmall" style={styles.eventTitle}>
+              {event.title}
+            </Text>
+
+            <Surface elevation={2} style={styles.infoCard}>
+              <View style={styles.detailsRow}>
+                <Surface elevation={0} style={styles.detailCard}>
+                  <Text variant="bodyLarge" style={styles.detailIcon}>
+                    📅
+                  </Text>
+                  <Text variant="bodyMedium" style={styles.detailText} numberOfLines={1}>
+                    {formattedDate}
+                  </Text>
+                </Surface>
+                <Surface elevation={0} style={styles.detailCard}>
+                  <Text variant="bodyLarge" style={styles.detailIcon}>
+                    📍
+                  </Text>
+                  <Text variant="bodyMedium" style={styles.detailText} numberOfLines={1} ellipsizeMode="tail">
+                    {event.address}
+                  </Text>
+                </Surface>
+              </View>
+
+              <Button mode="outlined" onPress={openMapModal} style={styles.mapButton}>
+                📍 Посмотреть на карте
+              </Button>
+
+              <View style={styles.summaryRow}>
+                <Text variant="titleMedium" style={styles.summaryText}>
+                  {occupancyText}
+                </Text>
+                <Text variant="bodySmall" style={styles.summarySubtext}>
+                  {event.reserved}/{event.slots} занято
+                </Text>
+              </View>
+              <ProgressBar
+                  progress={event.reserved / event.slots}
+                  color={isFull ? theme.colors.error : theme.colors.primary}
+                  style={styles.progressBar}
+              />
           </Surface>
 
           {/* Описание */}
@@ -165,26 +166,35 @@ export default function EventDetailScreen() {
           )}
 
           {/* Автор */}
-          <Surface elevation={1} style={styles.authorCard}>
-            <Text variant="labelLarge" style={styles.sectionTitle}>
-              Организатор
-            </Text>
-            <View style={styles.authorRow}>
-              <Avatar.Text
-                  size={48}
-                  label={event.author.name.charAt(0).toUpperCase()}
-                  style={{backgroundColor: theme.colors.primary}}
-              />
-              <View style={styles.authorInfo}>
-                <Text variant="bodyLarge" style={{fontWeight: '700'}}>
-                  {event.author.name}
-                </Text>
-                <Text
-                    variant="bodyMedium"
-                    style={{color: theme.colors.onSurfaceVariant}}
-                >
-                  {event.author.bio}
-                </Text>
+            <Surface elevation={2} style={styles.authorCard}>
+              <Text variant="labelLarge" style={styles.sectionTitle}>
+                Организатор
+              </Text>
+              <View style={styles.authorRow}>
+                {event.author.avatar ? (
+                    <Avatar.Image
+                        size={48}
+                        source={{uri: event.author.avatar}}
+                        style={styles.authorAvatar}
+                    />
+                ) : (
+                    <Avatar.Text
+                        size={48}
+                        label={event.author.name.charAt(0).toUpperCase()}
+                        style={styles.authorAvatar}
+                        labelStyle={styles.avatarLabel}
+                    />
+                )}
+                <View style={styles.authorInfo}>
+                  <Text variant="bodyLarge" style={{fontWeight: '700'}}>
+                    {event.author.name}
+                  </Text>
+                  <Text
+                      variant="bodyMedium"
+                      style={{color: theme.colors.onSurfaceVariant}}
+                  >
+                    {event.author.bio}
+                  </Text>
               </View>
             </View>
           </Surface>
@@ -198,8 +208,8 @@ export default function EventDetailScreen() {
               <Text variant="titleMedium" style={styles.modalTitle}>
                 Адрес на карте
               </Text>
-              <Text variant="bodyMedium" style={styles.modalAddress}>
-                {event.address}
+              <Text variant="bodyMedium" style={styles.modalMeta} numberOfLines={1} ellipsizeMode="tail">
+                {formattedDate}, {event.address}
               </Text>
               {mapLoading && (
                   <View style={styles.modalLoader}>
@@ -219,17 +229,19 @@ export default function EventDetailScreen() {
               </Button>
             </Modal>
           </Portal>
+          </ScrollView>
 
-          {/* Кнопка записи */}
-          <Button
-              mode="contained"
-              onPress={() => console.log('Запись на событие:', event.id)}
-              disabled={isFull}
-              style={styles.subscribeBtn}
-          >
-            {isFull ? 'Мест нет' : 'Записаться'}
-          </Button>
-        </ScrollView>
+          <View style={[styles.footer, {paddingBottom: insets.bottom || Spacing.three}]}>
+            <Button
+                mode="contained"
+                onPress={() => console.log('Запись на событие:', event.id)}
+                disabled={isFull}
+                style={styles.bottomButton}
+            >
+              {isFull ? 'Мест нет' : 'Записаться'}
+            </Button>
+          </View>
+        </View>
       </PageLayout>
   );
 }
@@ -256,33 +268,75 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.two,
   },
   categoryText: {color: '#FFFFFF', fontSize: 12},
+  screen: {
+    flex: 1,
+    backgroundColor: '#FAFBFF',
+  },
   infoCard: {
     borderRadius: Spacing.three,
-    padding: Spacing.three,
+    padding: Spacing.four,
+    gap: Spacing.three,
+    marginBottom: Spacing.three,
+    backgroundColor: '#FFFFFF',
+  },
+  eventTitle: {
+    fontWeight: '700',
+    marginBottom: Spacing.three,
+  },
+  capacityBadge: {
+    alignItems: 'flex-end',
+    paddingVertical: Spacing.one,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Spacing.three,
+    backgroundColor: '#F2F6FF',
+  },
+  capacityTitle: {
+    fontWeight: '700',
+  },
+  capacitySubtitle: {
+    color: '#6A6A6A',
+  },
+  detailsRow: {
+    flexDirection: 'row',
     gap: Spacing.two,
     marginBottom: Spacing.three,
   },
-  infoRow: {
+  detailCard: {
+    flex: 1,
+    borderRadius: Spacing.three,
+    padding: Spacing.three,
+    backgroundColor: '#F8FAFF',
+  },
+  detailIcon: {
+    marginBottom: Spacing.one,
+  },
+  detailText: {
+    color: '#3C3C3C',
+  },
+  summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: Spacing.three,
   },
-  addressText: {
-    maxWidth: '50%',
+  summaryText: {
+    fontWeight: '700',
+  },
+  summarySubtext: {
+    color: '#6A6A6A',
   },
   mapButton: {
-    alignSelf: 'flex-start',
-    marginTop: -Spacing.two,
-    marginBottom: Spacing.two,
-    paddingHorizontal: Spacing.two,
+    marginTop: Spacing.one,
   },
   progressBar: {
-    height: 8,
-    borderRadius: 4,
+    height: 10,
+    borderRadius: 5,
+    marginTop: Spacing.two,
   },
   description: {
     lineHeight: 28,
     marginBottom: Spacing.three,
+    fontSize: 16,
   },
   tagsRow: {
     flexDirection: 'row',
@@ -290,12 +344,20 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
     marginBottom: Spacing.three,
   },
-  tag: {borderRadius: Spacing.two},
+  tag: {
+    borderRadius: Spacing.three,
+    backgroundColor: '#F3F5FF',
+    paddingHorizontal: Spacing.two,
+    paddingVertical: Spacing.one,
+  },
   authorCard: {
     borderRadius: Spacing.three,
-    padding: Spacing.three,
-    gap: Spacing.two,
+    padding: Spacing.four,
+    gap: Spacing.three,
     marginBottom: Spacing.three,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E6E9F2',
   },
   sectionTitle: {fontWeight: '700'},
   authorRow: {
@@ -304,8 +366,28 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   authorInfo: {flex: 1, gap: Spacing.half},
+  authorAvatar: {
+    backgroundColor: '#E7EEFF',
+  },
+  avatarLabel: {
+    color: '#1C3D7A',
+  },
   closeMapButton: {
     marginTop: Spacing.three,
+  },
+  footer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: Spacing.three,
+    backgroundColor: '#FAFBFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E6E9F2',
+    paddingTop: Spacing.three,
+  },
+  bottomButton: {
+    width: '100%',
   },
   mapImage: {
     width: '100%',
@@ -319,8 +401,12 @@ const styles = StyleSheet.create({
     borderRadius: Spacing.three,
   },
   modalTitle: {
-    marginBottom: Spacing.one,
+    marginBottom: Spacing.two,
     fontWeight: '700',
+  },
+  modalMeta: {
+    color: '#4A4A4A',
+    marginBottom: Spacing.two,
   },
   modalAddress: {
     marginBottom: Spacing.two,
