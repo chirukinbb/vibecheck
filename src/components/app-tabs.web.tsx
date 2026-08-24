@@ -1,19 +1,12 @@
-import {
-  Tabs,
-  TabList,
-  TabTrigger,
-  TabSlot,
-  TabTriggerSlotProps,
-  TabListProps,
-} from 'expo-router/ui';
-import { SymbolView } from 'expo-symbols';
-import { Pressable, useColorScheme, View, StyleSheet } from 'react-native';
+import {TabList, TabListProps, Tabs, TabSlot, TabTrigger, TabTriggerSlotProps,} from 'expo-router/ui';
+import {SymbolView} from 'expo-symbols';
+import {Pressable, StyleSheet, useColorScheme, View} from 'react-native';
 
-import { ExternalLink } from './external-link';
-import { ThemedText } from './themed-text';
-import { ThemedView } from './themed-view';
+import {ExternalLink} from './external-link';
+import {ThemedText} from './themed-text';
+import {ThemedView} from './themed-view';
 
-import { Colors, MaxContentWidth, Spacing } from '@/constants/theme';
+import {Colors, MaxContentWidth, Spacing} from '@/constants/theme';
 
 export default function AppTabs() {
   return (
@@ -48,8 +41,8 @@ export function TabButton({ children, isFocused, ...props }: TabTriggerSlotProps
 }
 
 export function CustomTabList(props: TabListProps) {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
+  const scheme = useColorScheme() ?? 'light';
+  const colors = Colors[scheme === 'dark' || scheme === 'light' ? scheme : 'light'];
 
   return (
     <View {...props} style={styles.tabListContainer}>
@@ -65,7 +58,7 @@ export function CustomTabList(props: TabListProps) {
             <ThemedText type="link">Docs</ThemedText>
             <SymbolView
               tintColor={colors.text}
-              name={{ ios: 'arrow.up.right.square', web: 'link' }}
+              name="arrow.up.right.square"
               size={12}
             />
           </Pressable>

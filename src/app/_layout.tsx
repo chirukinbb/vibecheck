@@ -11,7 +11,11 @@ import {paperDarkTheme, paperLightTheme} from '@/theme/paper-theme';
 export default function RootLayout() {
     const scheme = useColorScheme();
     const themeMode = useSettingsStore((state) => state.themeMode);
-    const {loginWithToken} = useAuthStore();
+    const {hydrate, loginWithToken} = useAuthStore();
+
+    useEffect(() => {
+      //  void hydrate();
+    }, [hydrate]);
 
     useEffect(() => {
         const handleDeepLink = async (url: string | null) => {
@@ -19,11 +23,15 @@ export default function RootLayout() {
 
             try {
                 const parsed = new URL(url);
-                const token = parsed.searchParams.get('token');
+                const tokenFromUrl = parsed.searchParams.get('token');
 
-                if (parsed.protocol === 'events:' && parsed.hostname === 'auth-callback' && token) {
-                    await loginWithToken(token);
-                    router.replace('/(tabs)');
+                if (parsed.protocol === 'events:' && parsed.hostname === 'auth-callback' && tokenFromUrl) {
+                    router.replace({ pathname: '/auth-callback', params: { token: tokenFromUrl } });
+                    return;
+                }
+
+                if (parsed.protocol === 'events:' && parsed.hostname === 'auth-callback' && !tokenFromUrl) {
+                    router.replace('/(auth)/login');
                 }
             } catch {
                 // игнорируем невалидный deep-link

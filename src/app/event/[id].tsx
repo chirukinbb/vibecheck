@@ -1,33 +1,41 @@
 // src/app/event/[id].tsx — детальная страница события
 import {router, useLocalSearchParams} from 'expo-router';
-import {useState} from 'react';
+import {useEffect, useState} from 'react';
 import {Image, ScrollView, StyleSheet, View} from 'react-native';
 import {
-  ActivityIndicator,
-  Avatar,
-  Button,
-  Card,
-  Chip,
-  Modal,
-  Portal,
-  ProgressBar,
-  Surface,
-  Text,
-  useTheme,
+    ActivityIndicator,
+    Avatar,
+    Button,
+    Card,
+    Chip,
+    Modal,
+    Portal,
+    ProgressBar,
+    Surface,
+    Text,
+    useTheme,
 } from 'react-native-paper';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import PageLayout from '@/components/page-layout';
-import {formatDate, getEventById} from '@/constants/mock-data';
+import {formatDate} from '@/constants/mock-data';
 import {MaxContentWidth, Spacing} from '@/constants/theme';
+import {useEventsStore} from '@/stores';
 
 const TOMTOM_API_KEY = process.env.EXPO_PUBLIC_TOMTOM_API_KEY || process.env.TOMTOM_API_KEY || 'BHEiGUcbB06ofsGybuUFTFReGMYYkoy9';
 
 export default function EventDetailScreen() {
   const {id} = useLocalSearchParams<{ id: string }>();
   const theme = useTheme();
+  const {selectedEvent, isLoadingSingle, error, fetchEvent, clearSelected} = useEventsStore();
 
-  const event = getEventById(Number(id));
+  useEffect(() => {
+    if (!id) return;
+    clearSelected();
+    void fetchEvent(Number(id));
+  }, [clearSelected, fetchEvent, id]);
+
+  const event = selectedEvent;
   const insets = useSafeAreaInsets();
   const address = event?.address ?? '';
   const [mapVisible, setMapVisible] = useState(false);
@@ -57,19 +65,29 @@ export default function EventDetailScreen() {
       setMapUrl(
           `https://api.tomtom.com/map/1/staticimage?layer=basic&style=main&zoom=15&width=700&height=400&center=${lon},${lat}&format=png&key=${TOMTOM_API_KEY}&pois=${lon},${lat}`,
       );
-    } catch (error) {
+    } catch (_error) {
       setMapError('Не удалось загрузить карту');
     } finally {
       setMapLoading(false);
     }
   };
 
+  if (isLoadingSingle && !event) {
+    return (
+        <PageLayout title="Загрузка…">
+          <View style={styles.centered}>
+            <ActivityIndicator animating size="large"/>
+          </View>
+        </PageLayout>
+    );
+  }
+
   if (!event) {
     return (
         <PageLayout title="Событие не найдено">
           <View style={styles.centered}>
             <Text variant="bodyLarge" style={{color: theme.colors.onSurfaceVariant}}>
-              Событие не найдено
+              {error ?? 'Событие не найдено'}
             </Text>
           </View>
         </PageLayout>
@@ -78,7 +96,6 @@ export default function EventDetailScreen() {
 
   const slotsLeft = event.slots - event.reserved;
   const isFull = slotsLeft <= 0;
-  const isAlmostFull = slotsLeft <= 3;
   const occupancyText = isFull ? 'Мест нет' : `${slotsLeft} свободно`;
   const formattedDate = formatDate(event.planing_time);
 
@@ -96,7 +113,6 @@ export default function EventDetailScreen() {
               ]}
               showsVerticalScrollIndicator={false}
           >
-            {/* Обложка */}
             <Card.Cover
                 source={{uri: event.thumbnail_url}}
                 style={styles.cover}
@@ -143,29 +159,26 @@ export default function EventDetailScreen() {
                 </Text>
               </View>
               <ProgressBar
-                  progress={event.reserved / event.slots}
+                  progress={event.reserved / (event.slots || 1)}
                   color={isFull ? theme.colors.error : theme.colors.primary}
                   style={styles.progressBar}
               />
-          </Surface>
+            </Surface>
 
-          {/* Описание */}
-          <Text variant="bodyLarge" style={styles.description}>
-            {event.description}
-          </Text>
+            <Text variant="bodyLarge" style={styles.description}>
+              {event.description}
+            </Text>
 
-          {/* Теги */}
-          {event.tags && event.tags.length > 0 && (
-              <View style={styles.tagsRow}>
-                {event.tags.map((tag) => (
-                    <Chip key={tag.id} compact style={styles.tag}>
-                      #{tag.name}
-                    </Chip>
-                ))}
-              </View>
-          )}
+            {event.tags && event.tags.length > 0 && (
+                <View style={styles.tagsRow}>
+                  {event.tags.map((tag) => (
+                      <Chip key={tag.id} compact style={styles.tag}>
+                        #{tag.name}
+                      </Chip>
+                  ))}
+                </View>
+            )}
 
-          {/* Автор */}
             <Surface elevation={2} style={styles.authorCard}>
               <Text variant="labelLarge" style={styles.sectionTitle}>
                 Организатор
@@ -195,40 +208,40 @@ export default function EventDetailScreen() {
                   >
                     {event.author.bio}
                   </Text>
+                </View>
               </View>
-            </View>
-          </Surface>
+            </Surface>
 
-          <Portal>
-            <Modal
-                visible={mapVisible}
-                onDismiss={() => setMapVisible(false)}
-                contentContainerStyle={[styles.modal, {backgroundColor: theme.colors.surface}]}
-            >
-              <Text variant="titleMedium" style={styles.modalTitle}>
-                Адрес на карте
-              </Text>
-              <Text variant="bodyMedium" style={styles.modalMeta} numberOfLines={1} ellipsizeMode="tail">
-                {formattedDate}, {event.address}
-              </Text>
-              {mapLoading && (
-                  <View style={styles.modalLoader}>
-                    <ActivityIndicator animating size="large"/>
-                  </View>
-              )}
-              {mapError && (
-                  <Text variant="bodyMedium" style={styles.errorText}>
-                    {mapError}
-                  </Text>
-              )}
-              {!mapLoading && mapUrl && (
-                  <Image source={{uri: mapUrl}} style={styles.mapImage}/>
-              )}
-              <Button mode="contained" onPress={() => setMapVisible(false)} style={styles.closeMapButton}>
-                Закрыть
-              </Button>
-            </Modal>
-          </Portal>
+            <Portal>
+              <Modal
+                  visible={mapVisible}
+                  onDismiss={() => setMapVisible(false)}
+                  contentContainerStyle={[styles.modal, {backgroundColor: theme.colors.surface}]}
+              >
+                <Text variant="titleMedium" style={styles.modalTitle}>
+                  Адрес на карте
+                </Text>
+                <Text variant="bodyMedium" style={styles.modalMeta} numberOfLines={1} ellipsizeMode="tail">
+                  {formattedDate}, {event.address}
+                </Text>
+                {mapLoading && (
+                    <View style={styles.modalLoader}>
+                      <ActivityIndicator animating size="large"/>
+                    </View>
+                )}
+                {mapError && (
+                    <Text variant="bodyMedium" style={styles.errorText}>
+                      {mapError}
+                    </Text>
+                )}
+                {!mapLoading && mapUrl && (
+                    <Image source={{uri: mapUrl}} style={styles.mapImage}/>
+                )}
+                <Button mode="contained" onPress={() => setMapVisible(false)} style={styles.closeMapButton}>
+                  Закрыть
+                </Button>
+              </Modal>
+            </Portal>
           </ScrollView>
 
           <View style={[styles.footer, {paddingBottom: insets.bottom || Spacing.three}]}>

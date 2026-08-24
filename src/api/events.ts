@@ -1,5 +1,4 @@
 // src/api/events.ts — события: CRUD, подписка, отзывы
-import {apiClient} from './client';
 import type {
     ApiResponse,
     CreateEventDTO,
@@ -9,6 +8,7 @@ import type {
     SuccessResponse,
     UpdateEventDTO,
 } from '../types';
+import {apiClient} from './client';
 
 // ─── Список событий ──────────────────────────────────────────────────
 
@@ -17,6 +17,7 @@ export function getEvents(params?: {
     page?: number;
     per_page?: number;
 }): Promise<PaginatedResponse<Event>> {
+    console.log('Fetching events with params:', params);
     return apiClient.get<PaginatedResponse<Event>>('/events', {params}).then((r) => r.data);
 }
 

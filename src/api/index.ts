@@ -1,7 +1,7 @@
 // src/api/index.ts — реэкспорт всех API-модулей
 
 // HTTP-клиент
-export {API_URL, apiClient} from './client';
+export { API_URL, apiClient } from './client';
 
 // Auth
 export {
@@ -21,17 +21,20 @@ export {
 } from './events';
 
 // Категории
-export {getCategories} from './categories';
+export { getCategories } from './categories';
 
 // Профиль
-export {updateProfile} from './profile';
+export { updateProfile } from './profile';
 
 // Гео-фильтр
-export {updateFilter} from './filter';
+export { updateFilter } from './filter';
 
 // Обратная связь
-export {sendFeedback} from './feedback';
+export { sendFeedback } from './feedback';
+
+// Языки
+export { getLanguages } from './languages';
 
 // FCM-токен
-export {updateDeviceToken} from './device';
+export { updateDeviceToken } from './device';
 

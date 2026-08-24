@@ -4,61 +4,101 @@ import ImagePickerWithCrop from '@/components/image-picker';
 import MultiSelect from '@/components/multi-select';
 import PageLayout from '@/components/page-layout';
 import PhoneInput from '@/components/phone-input';
-import {AVAILABLE_LANGUAGES, MOCK_CATEGORIES, MOCK_FILTER, MOCK_PROFILE,} from '@/constants/mock-data';
+import {AVAILABLE_LANGUAGES} from '@/constants/mock-data';
 import {MaxContentWidth, Spacing} from '@/constants/theme';
+import {useAuthStore, useCategoriesStore, useFilterStore, useProfileStore} from '@/stores';
 import {useSettingsStore} from '@/stores/settingsStore';
 import * as Location from 'expo-location';
 import {router} from 'expo-router';
-import {useState} from 'react';
-import {KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
-import {Avatar, Button, SegmentedButtons, Surface, TextInput, useTheme} from 'react-native-paper';
+import {useEffect, useState} from 'react';
+import {KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View} from 'react-native';
+import {Avatar, Button, SegmentedButtons, Surface, Text, TextInput, useTheme} from 'react-native-paper';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 export default function ProfileScreen() {
   const theme = useTheme();
   const themeMode = useSettingsStore((state) => state.themeMode);
   const setThemeMode = useSettingsStore((state) => state.setThemeMode);
+  const profile = useAuthStore((state) => state.profile);
+  const filter = useAuthStore((state) => state.filter);
+  const categories = useCategoriesStore((state) => state.categories);
+  const fetchCategories = useCategoriesStore((state) => state.fetchCategories);
+  const {saveProfile, isUpdating: isProfileUpdating} = useProfileStore();
+  const {saveFilter, isUpdating: isFilterUpdating} = useFilterStore();
   const [activeTab, setActiveTab] = useState<'profile' | 'filter' | 'settings'>('profile');
   const [locationLoading, setLocationLoading] = useState(false);
 
+  useEffect(() => {
+    void fetchCategories();
+  }, [fetchCategories]);
+
+  useEffect(() => {
+    if (!profile) return;
+    setName(profile.name ?? '');
+    setPhone(profile.phone ?? '');
+    setCountryPhoneCode(profile.country_phone_code ?? '+7');
+    setCountryPhoneIso(profile.country_phone_iso ?? 'RU');
+    setLanguages(profile.languages ?? ['ru', 'en']);
+    setBio(profile.bio ?? '');
+    setAvatarUri(profile.avatar ?? null);
+  }, [profile]);
+
   // ─── Профиль ─────────────────────────────────────────────────
-  const [name, setName] = useState(MOCK_PROFILE.name);
-  const [phone, setPhone] = useState(MOCK_PROFILE.phone ?? '');
+  const [name, setName] = useState(profile?.name ?? '');
+  const [phone, setPhone] = useState(profile?.phone ?? '');
   const [countryPhoneCode, setCountryPhoneCode] = useState(
-      MOCK_PROFILE.country_phone_code ?? '+7',
+      profile?.country_phone_code ?? '+7',
   );
   const [countryPhoneIso, setCountryPhoneIso] = useState(
-      MOCK_PROFILE.country_phone_iso ?? 'RU',
+      profile?.country_phone_iso ?? 'RU',
   );
-  const [languages, setLanguages] = useState<string[]>(
-      MOCK_PROFILE.languages ?? ['ru', 'en'],
-  );
-  const [bio, setBio] = useState(MOCK_PROFILE.bio ?? '');
-  const [avatarUri, setAvatarUri] = useState<string | null>(MOCK_PROFILE.avatar);
+  const [languages, setLanguages] = useState<string[]>(profile?.languages ?? ['ru', 'en']);
+  const [bio, setBio] = useState(profile?.bio ?? '');
+  const [avatarUri, setAvatarUri] = useState<string | null>(profile?.avatar ?? null);
 
   // ─── Модал выбора источника ────────────────────────────
 
   // ─── Фильтр ──────────────────────────────────────────────────
   const [filterAddress, setFilterAddress] = useState('Москва');
-  const [radius, setRadius] = useState(String(MOCK_FILTER.radius ?? 10));
-  const [selectedCategories, setSelectedCategories] = useState<number[]>(
-      MOCK_FILTER.categories ?? [],
-  );
+  const [radius, setRadius] = useState(String(filter?.radius ?? 10));
+  const [selectedCategories, setSelectedCategories] = useState<number[]>(filter?.categories ?? []);
 
-  const handleSaveProfile = () => {
-    console.log('Сохраняем профиль:', {
+  useEffect(() => {
+    if (filter?.radius != null) {
+      setRadius(String(filter.radius));
+    }
+    if (filter?.categories) {
+      setSelectedCategories(filter.categories);
+    }
+  }, [filter]);
+
+  const handleSaveProfile = async () => {
+    const message = await saveProfile({
       name,
       phone,
-      countryPhoneCode,
-      countryPhoneIso,
+      country_phone_code: countryPhoneCode,
+      country_phone_iso: countryPhoneIso,
       languages,
       bio,
-      avatar: avatarUri
+      avatar: avatarUri,
     });
+
+    if (message) {
+      alert(message);
+    }
   };
 
-  const handleSaveFilter = () => {
-    console.log('Сохраняем фильтр:', {address: filterAddress, radius: Number(radius), categories: selectedCategories});
+  const handleSaveFilter = async () => {
+    const nextRadius = Number(radius) || 10;
+    const message = await saveFilter({
+      address: filterAddress.trim() || 'Москва',
+      radius: nextRadius,
+      categories: selectedCategories,
+    });
+
+    if (message) {
+      alert(message);
+    }
   };
 
   const handleUseCurrentLocation = async () => {
@@ -202,7 +242,12 @@ export default function ProfileScreen() {
                         placeholder="Расскажите о себе..."
                     />
 
-                    <Button mode="contained" onPress={handleSaveProfile}>
+                    <Button
+                        mode="contained"
+                        onPress={handleSaveProfile}
+                        loading={isProfileUpdating}
+                        disabled={isProfileUpdating}
+                    >
                       Сохранить профиль
                     </Button>
                   </View>
@@ -231,7 +276,7 @@ export default function ProfileScreen() {
                     {/* Категории фильтра */}
                     <MultiSelect
                         label="Категории"
-                        options={MOCK_CATEGORIES.map((cat) => ({
+                        options={categories.map((cat) => ({
                           code: cat.id,
                           label: cat.title,
                         }))}
@@ -239,7 +284,12 @@ export default function ProfileScreen() {
                         onChange={setSelectedCategories}
                     />
 
-                    <Button mode="contained" onPress={handleSaveFilter}>
+                    <Button
+                        mode="contained"
+                        onPress={handleSaveFilter}
+                        loading={isFilterUpdating}
+                        disabled={isFilterUpdating}
+                    >
                       Сохранить фильтр
                     </Button>
                   </View>
@@ -305,6 +355,13 @@ const styles = StyleSheet.create({
   },
   profileInfo: {
     gap: Spacing.one,
+  },
+  authorAvatar: {
+    backgroundColor: '#E8EAF6',
+  },
+  avatarLabel: {
+    color: '#1F2937',
+    fontWeight: '700',
   },
   profileName: {
     fontWeight: '700',

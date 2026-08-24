@@ -11,9 +11,9 @@ export type {
     RegisterCredentials
 } from './auth';
 
-export type {Profile, ProfileUpdateDTO} from './profile';
+export type { Profile, ProfileUpdateDTO } from './profile';
 
-export type {FilterUpdateDTO, GeoCenter, GeoFilter} from './filter';
+export type { FilterUpdateDTO, GeoCenter, GeoFilter } from './filter';
 
 export type {
     CreateEventDTO, Event,
@@ -21,13 +21,15 @@ export type {
     Tag, UpdateEventDTO
 } from './event';
 
-export type {Category} from './category';
+export type { Category } from './category';
 
-export type {Member, MemberFeedbackDTO} from './member';
+export type { Member, MemberFeedbackDTO } from './member';
 
-export type {CreateFeedbackDTO} from './feedback';
+export type { CreateFeedbackDTO } from './feedback';
 
-export type {DeviceTokenDTO} from './device';
+export type { DeviceTokenDTO } from './device';
+
+export type { LanguagesResponse } from '../api/languages';
 
 export type {
     EventNotificationData,

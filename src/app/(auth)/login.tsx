@@ -31,37 +31,24 @@ export default function LoginScreen() {
     setIsSubmitting(true);
     setFeedback(null);
 
-    // Preliminary diagnostics: log endpoint and try a quick ping to the API base
-    try {
-      const payloadPreview = mode === 'login'
-          ? {email: email.trim(), password: password ? '***' : undefined}
-          : {name: name.trim(), email: email.trim()};
-      console.log('Auth diagnostic — mode:', mode, 'API_URL:', API_URL);
-      console.log('Auth diagnostic — payload (masked):', payloadPreview);
-
-      // Quick connectivity check to API_URL
-      try {
-        const ping = await fetch(API_URL, {method: 'GET'});
-        console.log('Auth diagnostic — ping ok:', ping && typeof ping.status === 'number', 'status:', ping.status);
-      } catch (pingErr) {
-        console.error('Auth diagnostic — ping failed:', pingErr);
-      }
-    } catch (diagErr) {
-      console.error('Auth diagnostic logging failed:', diagErr);
-    }
-
     try {
       const response = mode === 'login'
           ? await loginWithEmail({email: email.trim(), password})
           : await registerWithEmail({name: name.trim(), email: email.trim()});
 
-      login(response);
+      await login(response);
       setFeedback({
         type: 'success',
         text: mode === 'login' ? 'Вы успешно вошли в аккаунт' : 'Регистрация завершена успешно',
       });
 
-      setTimeout(() => router.replace('/(tabs)'), 600);
+      setIsSubmitting(true);
+
+      try {
+        router.replace(`/bootstrap/${response.data.token}`);
+      } finally {
+        setIsSubmitting(false);
+      }
     } catch (error: any) {
       let serverMessage = 'Не удалось выполнить вход';
       try {

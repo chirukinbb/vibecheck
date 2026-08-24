@@ -20,7 +20,7 @@ export const useCategoriesStore = create<CategoriesState>((set) => ({
     set({isLoading: true, error: null});
     try {
       const data = await getCategories();
-      set({categories: data});
+      set({categories: data.data});
     } catch (e: any) {
       set({error: e?.message ?? 'Ошибка загрузки категорий'});
     } finally {

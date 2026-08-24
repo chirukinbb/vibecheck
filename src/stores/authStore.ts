@@ -1,6 +1,6 @@
 // src/stores/authStore.ts — авторизация: токен, профиль, фильтр
 import {create} from 'zustand';
-import {getCurrentUser} from '../api/auth';
+import {getCurrentUser} from '@/api';
 import {clearAuthToken as clearClientToken, setAuthToken} from '../api/client';
 import type {AuthCallbackResponse, GeoFilter, Profile} from '../types';
 
@@ -60,6 +60,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     try {
       const user = await getCurrentUser();
+      console.log('.getCurrentUser response:', user)
       setAuthToken(user.token);
       set({
         token: user.token,

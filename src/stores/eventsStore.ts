@@ -1,16 +1,16 @@
 // src/stores/eventsStore.ts — события: список, пагинация, CRUD
 import {create} from 'zustand';
-import type {CreateEventDTO, Event, MemberFeedbackDTO, PaginationMeta, UpdateEventDTO} from '../types';
 import {
-  createEvent,
-  deleteEvent,
-  getEvent,
-  getEvents,
-  submitMemberFeedback,
-  subscribeToEvent,
-  unsubscribeFromEvent,
-  updateEvent,
+    createEvent,
+    deleteEvent,
+    getEvent,
+    getEvents,
+    submitMemberFeedback,
+    subscribeToEvent,
+    unsubscribeFromEvent,
+    updateEvent,
 } from '../api/events';
+import type {CreateEventDTO, Event, MemberFeedbackDTO, PaginationMeta, UpdateEventDTO} from '../types';
 
 interface EventsState {
   // ─── Список ───
@@ -61,6 +61,7 @@ export const useEventsStore = create<EventsState>((set, get) => ({
     set({isLoadingList: true, error: null});
     try {
       const res = await getEvents({page});
+      console.log('Fetched events:', res);
       set({events: res.data, meta: res.meta});
     } catch (e: any) {
       set({error: e?.message ?? 'Ошибка загрузки событий'});

@@ -15,10 +15,35 @@ export async function loginWithEmail(payload: LoginCredentials): Promise<AuthCal
   return data;
 }
 
-export async function getCurrentUser(): Promise<AuthCallbackResponse> {
-  const {data} = await apiClient.get<AuthCallbackResponse>('/me');
-  setAuthToken(data.token);
-  return data;
+export async function getCurrentUser(): Promise<T> {
+  console.log('=== GET /me START ===');
+  console.log('api base URL:', apiClient.defaults.baseURL);
+  console.log('request headers before /me:', apiClient.defaults.headers);
+  console.log('auth token exists:', !!(apiClient.defaults.headers as any)?.Authorization);
+
+  try {
+    const response = await apiClient.get<AuthCallbackResponse>('/me');
+    console.log('=== GET /me SUCCESS ===');
+    console.log('status:', response.status);
+    console.log('url:', response.config.url);
+    console.log('headers:', response.config.headers);
+    console.log('response data:', response.data);
+    const data = response.data.data;
+    console.log('user data:', data)
+    setAuthToken(data.token);
+    return data;
+  } catch (error: any) {
+    console.log('=== GET /me ERROR ===');
+    console.log('error name:', error?.name);
+    console.log('error message:', error?.message);
+    console.log('error code:', error?.code);
+    console.log('error status:', error?.response?.status);
+    console.log('error url:', error?.config?.url);
+    console.log('error headers:', error?.config?.headers);
+    console.log('error response data:', error?.response?.data);
+    console.log('error stack:', error?.stack);
+    throw error;
+  }
 }
 
 export async function registerWithEmail(payload: RegisterCredentials): Promise<AuthCallbackResponse> {

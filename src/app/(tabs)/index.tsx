@@ -1,27 +1,55 @@
 // src/app/(tabs)/index.tsx — список событий
 import {router} from 'expo-router';
+import {useEffect} from 'react';
 import {FlatList, StyleSheet, View} from 'react-native';
 import {Card, Chip, Icon, ProgressBar, Text, useTheme,} from 'react-native-paper';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import PageLayout from '@/components/page-layout';
-import {formatDate, MOCK_EVENTS} from '@/constants/mock-data';
+import {formatDate} from '@/constants/mock-data';
 import {MaxContentWidth, Spacing} from '@/constants/theme';
+import {useAuthStore, useEventsStore} from '@/stores';
 
 export default function EventsListScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const {events, isLoadingList, fetchEvents} = useEventsStore();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+  useAuthStore((state) => console.log(state));
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.replace('/(auth)/login');
+      return;
+    }
+
+    void fetchEvents();
+  }, [fetchEvents, isAuthenticated]);
 
   return (
       <PageLayout title="События">
         <FlatList
-            data={MOCK_EVENTS}
+            data={events}
             keyExtractor={(item) => String(item.id)}
             contentContainerStyle={[
               styles.list,
               {paddingBottom: insets.bottom + Spacing.four},
             ]}
             showsVerticalScrollIndicator={false}
+            refreshing={isLoadingList}
+            onRefresh={() => void fetchEvents()}
+            ListEmptyComponent={
+              isLoadingList
+                  ? null
+                  : (
+                      <View style={styles.emptyState}>
+                        <Text variant="bodyLarge" style={{color: theme.colors.onSurfaceVariant}}>
+                          Событий пока нет
+                        </Text>
+                      </View>
+                    )
+            }
             renderItem={({item}) => {
               const slotsLeft = item.slots - item.reserved;
               const isFull = slotsLeft <= 0;
@@ -45,7 +73,6 @@ export default function EventsListScreen() {
                     />
 
                     <Card.Content style={styles.cardBody}>
-                      {/* Категория с динамическими цветами из темы */}
                       <Card.Content style={styles.badgeRow}>
                         <Chip
                             compact
@@ -61,12 +88,10 @@ export default function EventsListScreen() {
                         </Chip>
                       </Card.Content>
 
-                      {/* Заголовок по гайдлайнам M3 для Cards */}
                       <Text variant="titleLarge" style={styles.cardTitle}>
                         {item.title}
                       </Text>
 
-                      {/* Описание */}
                       <Text
                           variant="bodyMedium"
                           numberOfLines={2}
@@ -75,7 +100,6 @@ export default function EventsListScreen() {
                         {item.description}
                       </Text>
 
-                      {/* Дата + места */}
                       <View style={styles.cardFooter}>
                         <View style={styles.dateContainer}>
                           <Icon
@@ -101,9 +125,8 @@ export default function EventsListScreen() {
                         </Text>
                       </View>
 
-                      {/* Прогресс-бар */}
                       <ProgressBar
-                          progress={item.reserved / item.slots}
+                          progress={item.reserved / (item.slots || 1)}
                           color={statusColor}
                           style={styles.progressBar}
                       />
@@ -135,6 +158,11 @@ const styles = StyleSheet.create({
   cardBody: {
     gap: Spacing.two,
     paddingTop: Spacing.three,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.four,
   },
   badgeRow: {
     flexDirection: 'row',

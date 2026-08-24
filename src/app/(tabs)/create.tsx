@@ -2,7 +2,7 @@
 import DateTimePicker from '@/components/date-time-picker';
 import * as Location from 'expo-location';
 import {router} from 'expo-router';
-import {useState} from 'react';
+import {useEffect, useState} from 'react';
 import {Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View} from 'react-native';
 import {Button, Chip, Modal, Portal, Searchbar, Surface, TextInput, useTheme} from 'react-native-paper';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -11,15 +11,24 @@ import AddressPicker from '@/components/address-picker';
 import ImagePickerWithCrop from '@/components/image-picker';
 import PageLayout from '@/components/page-layout';
 import SingleSelect from '@/components/single-select';
-import {MOCK_CATEGORIES, MOCK_EVENTS} from '@/constants/mock-data';
 import {MaxContentWidth, Spacing} from '@/constants/theme';
-
-const SUGGESTED_TAGS = Array.from(
-    new Set(MOCK_EVENTS.flatMap((event) => event.tags?.map((t) => t.name) ?? [])),
-).sort();
+import {useCategoriesStore, useEventsStore} from '@/stores';
 
 export default function CreateEventScreen() {
   const theme = useTheme();
+  const {events} = useEventsStore();
+  const categories = useCategoriesStore((state) => state.categories);
+  const fetchCategories = useCategoriesStore((state) => state.fetchCategories);
+  const addEvent = useEventsStore((state) => state.addEvent);
+  const isMutating = useEventsStore((state) => state.isMutating);
+
+  useEffect(() => {
+    void fetchCategories();
+  }, [fetchCategories]);
+
+  const SUGGESTED_TAGS = Array.from(
+      new Set(events.flatMap((event) => event.tags?.map((t) => t.name) ?? [])),
+  ).sort();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -38,19 +47,25 @@ export default function CreateEventScreen() {
     setThumbnail(uri);
   };
 
-  const handleSubmit = () => {
-    // Хардкод — просто логируем данные
-    console.log('Создаём событие:', {
+  const handleSubmit = async () => {
+    if (!title || !categoryId || !address || !slots || !planingTime) {
+      return;
+    }
+
+    const saved = await addEvent({
       title,
       description,
       category_id: categoryId,
       address,
-      planing_time: planingTime ? planingTime.toISOString() : null,
+      planing_time: `${String(planingTime.getDate()).padStart(2, '0')}/${String(planingTime.getMonth() + 1).padStart(2, '0')}/${planingTime.getFullYear()} ${String(planingTime.getHours()).padStart(2, '0')}:${String(planingTime.getMinutes()).padStart(2, '0')}`,
       slots: Number(slots),
       tags,
-      thumbnail,
+      thumb_path: thumbnail ?? undefined,
     });
-    router.back();
+
+    if (saved) {
+      router.back();
+    }
   };
 
   const handleUseCurrentLocation = async () => {
@@ -126,7 +141,7 @@ export default function CreateEventScreen() {
               {/* Категория */}
               <SingleSelect<number>
                   label="Категория"
-                  options={MOCK_CATEGORIES.map((cat) => ({code: cat.id, label: cat.title}))}
+                  options={categories.map((cat) => ({code: cat.id, label: cat.title}))}
                   selected={categoryId}
                   onChange={(v) => setCategoryId(v as number | null)}
               />
@@ -296,7 +311,8 @@ export default function CreateEventScreen() {
                 <Button
                     mode="contained"
                     onPress={handleSubmit}
-                    disabled={!title || !categoryId || !address || !slots}
+                    loading={isMutating}
+                    disabled={isMutating || !title || !categoryId || !address || !slots || !planingTime}
                     style={styles.submitBtn}
                 >
                   Создать событие
