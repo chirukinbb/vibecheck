@@ -19,8 +19,8 @@ export const useCategoriesStore = create<CategoriesState>((set) => ({
   fetchCategories: async () => {
     set({isLoading: true, error: null});
     try {
-      const data = await getCategories();
-      set({categories: data.data});
+      const data = (await getCategories()).data;
+      set({categories: data});
     } catch (e: any) {
       set({error: e?.message ?? 'Ошибка загрузки категорий'});
     } finally {

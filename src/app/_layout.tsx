@@ -11,11 +11,7 @@ import {paperDarkTheme, paperLightTheme} from '@/theme/paper-theme';
 export default function RootLayout() {
     const scheme = useColorScheme();
     const themeMode = useSettingsStore((state) => state.themeMode);
-    const {hydrate, loginWithToken} = useAuthStore();
-
-    useEffect(() => {
-      //  void hydrate();
-    }, [hydrate]);
+    const {loginWithToken} = useAuthStore();
 
     useEffect(() => {
         const handleDeepLink = async (url: string | null) => {

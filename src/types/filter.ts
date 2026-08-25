@@ -1,12 +1,12 @@
 // src/types/filter.ts — гео-фильтр пользователя
 
-/** Гео-центр (lat/lng). В БД хранится как JSON-строка, API отдаёт/принимает как объект */
-export interface GeoCenter {
-    lat: number;
-    lng: number;
-}
+/**
+ * Гео-центр в виде массива `[lat, lng]`.
+ * В БД хранится как JSON-строка, API отдаёт/принимает как массив.
+ */
+export type GeoCenter = [number, number];
 
-/** Гео-фильтр (из OAuth-ответа и PATCH /api/v1/filter) */
+/** Гео-фильтр (из ответа GET /api/v1/me и PATCH /api/v1/filter) */
 export interface GeoFilter {
     center: GeoCenter | null;
     /** Радиус в километрах */
@@ -17,7 +17,7 @@ export interface GeoFilter {
 
 /** Тело запроса на обновление гео-фильтра (PATCH /api/v1/filter) */
 export interface FilterUpdateDTO {
-    /** Адрес строкой — сервер геокодирует через TomTom */
+    /** Адрес строкой — сервер геокодирует через TomTom и сохраняет в center */
     address: string;
     /** Радиус в километрах */
     radius: number;

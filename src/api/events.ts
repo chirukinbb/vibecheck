@@ -3,6 +3,7 @@ import type {
     ApiResponse,
     CreateEventDTO,
     Event,
+    EventListItem,
     MemberFeedbackDTO,
     PaginatedResponse,
     SuccessResponse,
@@ -12,13 +13,13 @@ import {apiClient} from './client';
 
 // ─── Список событий ──────────────────────────────────────────────────
 
-/** GET /api/v1/events — список событий с пагинацией */
+/** GET /api/v1/events — список событий с пагинацией (сокращённый вид) */
 export function getEvents(params?: {
     page?: number;
     per_page?: number;
-}): Promise<PaginatedResponse<Event>> {
+}): Promise<PaginatedResponse<EventListItem>> {
     console.log('Fetching events with params:', params);
-    return apiClient.get<PaginatedResponse<Event>>('/events', {params}).then((r) => r.data);
+    return apiClient.get<PaginatedResponse<EventListItem>>('/events', {params}).then((r) => r.data);
 }
 
 // ─── Одно событие ────────────────────────────────────────────────────

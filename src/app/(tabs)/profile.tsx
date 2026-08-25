@@ -3,7 +3,6 @@ import AddressPicker from '@/components/address-picker';
 import ImagePickerWithCrop from '@/components/image-picker';
 import MultiSelect from '@/components/multi-select';
 import PageLayout from '@/components/page-layout';
-import PhoneInput from '@/components/phone-input';
 import {AVAILABLE_LANGUAGES} from '@/constants/mock-data';
 import {MaxContentWidth, Spacing} from '@/constants/theme';
 import {useAuthStore, useCategoriesStore, useFilterStore, useProfileStore} from '@/stores';
@@ -35,26 +34,16 @@ export default function ProfileScreen() {
   useEffect(() => {
     if (!profile) return;
     setName(profile.name ?? '');
-    setPhone(profile.phone ?? '');
-    setCountryPhoneCode(profile.country_phone_code ?? '+7');
-    setCountryPhoneIso(profile.country_phone_iso ?? 'RU');
     setLanguages(profile.languages ?? ['ru', 'en']);
     setBio(profile.bio ?? '');
-    setAvatarUri(profile.avatar ?? null);
+    setAvatarUri(profile.avatar_url ?? null);
   }, [profile]);
 
   // ─── Профиль ─────────────────────────────────────────────────
   const [name, setName] = useState(profile?.name ?? '');
-  const [phone, setPhone] = useState(profile?.phone ?? '');
-  const [countryPhoneCode, setCountryPhoneCode] = useState(
-      profile?.country_phone_code ?? '+7',
-  );
-  const [countryPhoneIso, setCountryPhoneIso] = useState(
-      profile?.country_phone_iso ?? 'RU',
-  );
   const [languages, setLanguages] = useState<string[]>(profile?.languages ?? ['ru', 'en']);
   const [bio, setBio] = useState(profile?.bio ?? '');
-  const [avatarUri, setAvatarUri] = useState<string | null>(profile?.avatar ?? null);
+  const [avatarUri, setAvatarUri] = useState<string | null>(profile?.avatar_url ?? null);
 
   // ─── Модал выбора источника ────────────────────────────
 
@@ -64,6 +53,7 @@ export default function ProfileScreen() {
   const [selectedCategories, setSelectedCategories] = useState<number[]>(filter?.categories ?? []);
 
   useEffect(() => {
+    console.log(profile)
     if (filter?.radius != null) {
       setRadius(String(filter.radius));
     }
@@ -75,12 +65,9 @@ export default function ProfileScreen() {
   const handleSaveProfile = async () => {
     const message = await saveProfile({
       name,
-      phone,
-      country_phone_code: countryPhoneCode,
-      country_phone_iso: countryPhoneIso,
+      avatar_url: avatarUri,
       languages,
       bio,
-      avatar: avatarUri,
     });
 
     if (message) {
@@ -142,7 +129,7 @@ export default function ProfileScreen() {
   };
 
   const insets = useSafeAreaInsets();
-
+  console.log(avatarUri)
   return (
       <PageLayout title="Профиль">
         <View style={styles.screen}>
@@ -216,13 +203,6 @@ export default function ProfileScreen() {
                         label="Имя"
                         value={name}
                         onChangeText={setName}
-                    />
-
-                    <PhoneInput
-                        value={phone}
-                        onChangeText={setPhone}
-                        defaultCountryCode={countryPhoneCode}
-                        onCountryCodeChange={(_, iso) => setCountryPhoneIso(iso)}
                     />
 
                     <MultiSelect

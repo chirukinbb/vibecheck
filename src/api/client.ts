@@ -34,18 +34,18 @@ export function clearAuthToken(): void {
 
 // Подмешиваем Bearer-токен в каждый запрос
 apiClient.interceptors.request.use((config) => {
-  // Garantiruem, chto headers sushestvuyut
-  config.headers = config.headers ?? {};
+    // Гарантируем, что headers существуют
+    config.headers = (config.headers ?? {}) as typeof config.headers;
 
-  if (authToken) {
-    config.headers.Authorization = `Bearer ${authToken}`;
-  }
+    if (authToken) {
+        config.headers.Authorization = `Bearer ${authToken}`;
+    }
 
-  console.log('=== AXIOS REQUEST ===');
-  console.log('url:', `${config.baseURL ?? ''}${config.url ?? ''}`);
-  console.log('method:', config.method?.toUpperCase());
-  console.log('headers:', config.headers);
-  console.log('authToken exists:', Boolean(authToken));
+    console.log('=== AXIOS REQUEST ===');
+    console.log('url:', `${config.baseURL ?? ''}${config.url ?? ''}`);
+    console.log('method:', config.method?.toUpperCase());
+    console.log('headers:', config.headers);
+    console.log('authToken exists:', Boolean(authToken));
 
   return config;
 });

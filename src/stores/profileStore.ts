@@ -19,16 +19,13 @@ export const useProfileStore = create<ProfileState>((set) => ({
   saveProfile: async (dto) => {
     set({isUpdating: true, error: null});
     try {
-      const res = await updateProfile(dto);
+      const res = (await updateProfile(dto)).data;
       // Синхронизируем с authStore
       useAuthStore.getState().setProfile({
-        name: dto.name,
-        phone: dto.phone,
-        country_phone_code: dto.country_phone_code,
-        country_phone_iso: dto.country_phone_iso,
-        languages: dto.languages,
-        bio: dto.bio,
-        avatar: dto.avatar,
+        name: res.name,
+        avatar_url: res.avatar_url ?? null,
+        languages: res.languages,
+        bio: res.bio,
       });
       return res.message;
     } catch (e: any) {

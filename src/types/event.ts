@@ -1,33 +1,45 @@
 // src/types/event.ts — события
 
-/** Автор события (вложенный объект в ответе) */
+/** Автор события (вложенный объект в ответе GET /api/v1/event/{id}) */
 export interface EventAuthor {
     name: string;
-    phone: string;
-    country_phone_code: string;
+    avatar_url: string | null;
     languages: string[];
-    bio: string;
-    avatar?: string;
+    bio: string | null;
 }
 
-/** Событие (из GET /api/v1/events и GET /api/v1/event/{id}) */
-export interface Event {
+/** Общие поля события */
+interface EventBase {
     id: number;
     title: string;
     category: string;
     thumbnail_url: string;
     description: string;
+    slots: number;
+    /** Текущее количество записавшихся (может быть null — известный баг бэкенда) */
+    reserved: number | null;
+    /** Unix timestamp (секунды) */
+    planing_time: number;
+}
+
+/**
+ * Элемент списка событий (GET /api/v1/events).
+ * Возвращается в СОКРАЩЁННОМ виде — без address, координат, country и author.
+ */
+export interface EventListItem extends EventBase {
+}
+
+/**
+ * Полное событие (GET /api/v1/event/{id}).
+ * Содержит address, координаты, country и author.
+ */
+export interface Event extends EventBase {
     /** Широта (строка из БД) */
     coordinate_lat: string | null;
     /** Долгота (строка из БД) */
     coordinate_lng: string | null;
-    country: string;
-    /** Unix timestamp (секунды) */
-    planing_time: number;
-    slots: number;
+    country: string | null;
     address: string;
-    /** Текущее количество записавшихся */
-    reserved: number;
     /** Профиль автора */
     author: EventAuthor;
     /** Теги (если есть) */

@@ -51,7 +51,7 @@ export default function EventsListScreen() {
                     )
             }
             renderItem={({item}) => {
-              const slotsLeft = item.slots - item.reserved;
+              const slotsLeft = item.slots - (item.reserved ?? 0);
               const isFull = slotsLeft <= 0;
               const isAlmostFull = slotsLeft <= 3;
 
@@ -126,7 +126,7 @@ export default function EventsListScreen() {
                       </View>
 
                       <ProgressBar
-                          progress={item.reserved / (item.slots || 1)}
+                          progress={(item.reserved ?? 0) / (item.slots || 1)}
                           color={statusColor}
                           style={styles.progressBar}
                       />

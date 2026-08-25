@@ -8,7 +8,6 @@ export {
     getCurrentUser,
     getOAuthCallbackUrl,
     getOAuthRedirectUrl,
-    handleOAuthCallback,
     loginWithEmail,
     loginWithOAuth,
     registerWithEmail

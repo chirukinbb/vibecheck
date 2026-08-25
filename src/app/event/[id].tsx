@@ -94,7 +94,7 @@ export default function EventDetailScreen() {
     );
   }
 
-  const slotsLeft = event.slots - event.reserved;
+  const slotsLeft = event.slots - (event.reserved ?? 0);
   const isFull = slotsLeft <= 0;
   const occupancyText = isFull ? 'Мест нет' : `${slotsLeft} свободно`;
   const formattedDate = formatDate(event.planing_time);
@@ -155,11 +155,11 @@ export default function EventDetailScreen() {
                   {occupancyText}
                 </Text>
                 <Text variant="bodySmall" style={styles.summarySubtext}>
-                  {event.reserved}/{event.slots} занято
+                  {event.reserved ?? 0}/{event.slots} занято
                 </Text>
               </View>
               <ProgressBar
-                  progress={event.reserved / (event.slots || 1)}
+                  progress={(event.reserved ?? 0) / (event.slots || 1)}
                   color={isFull ? theme.colors.error : theme.colors.primary}
                   style={styles.progressBar}
               />
@@ -184,10 +184,10 @@ export default function EventDetailScreen() {
                 Организатор
               </Text>
               <View style={styles.authorRow}>
-                {event.author.avatar ? (
+                {event.author.avatar_url ? (
                     <Avatar.Image
                         size={48}
-                        source={{uri: event.author.avatar}}
+                        source={{uri: event.author.avatar_url}}
                         style={styles.authorAvatar}
                     />
                 ) : (

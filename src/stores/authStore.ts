@@ -2,7 +2,7 @@
 import {create} from 'zustand';
 import {getCurrentUser} from '@/api';
 import {clearAuthToken as clearClientToken, setAuthToken} from '../api/client';
-import type {AuthCallbackResponse, GeoFilter, Profile} from '../types';
+import type {GeoFilter, Profile} from '../types';
 
 interface AuthState {
   // ─── Данные ───
@@ -17,10 +17,7 @@ interface AuthState {
   isLoading: boolean;
 
   // ─── Действия ───
-  /** Принять ответ OAuth-колбэка и сохранить всё */
-  login: (data: AuthCallbackResponse) => void;
-
-  /** Принимать токен из deep link OAuth callback и загрузить данные по /me */
+  /** Принять токен из deep link OAuth callback / login и загрузить данные по /me */
   loginWithToken: (token: string) => Promise<void>;
 
   /** Выход: сбросить токен и состояние */
@@ -42,28 +39,15 @@ export const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: false,
   isLoading: false,
 
-  login: (data) => {
-    setAuthToken(data.token);
-    set({
-      token: data.token,
-      name: data.name,
-      profile: data.profile,
-      filter: data.filter,
-      hasFeedback: data.has_feedback,
-      isAuthenticated: true,
-    });
-  },
-
   loginWithToken: async (token) => {
     setAuthToken(token);
     set({isLoading: true});
 
     try {
       const user = await getCurrentUser();
-      console.log('.getCurrentUser response:', user)
-      setAuthToken(user.token);
+      // /me НЕ возвращает токен — сохраняем переданный из URL
       set({
-        token: user.token,
+        token,
         name: user.name,
         profile: user.profile,
         filter: user.filter,

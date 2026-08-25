@@ -1,4 +1,4 @@
-// src/types/auth.ts — авторизация через OAuth (Google/Facebook)
+// src/types/auth.ts — авторизация (email+password и OAuth)
 
 import type {GeoFilter} from './filter';
 import type {Profile} from './profile';
@@ -16,10 +16,14 @@ export interface RegisterCredentials {
   email: string;
 }
 
-/** Ответ после OAuth-авторизации (GET /api/auth/{provider}/callback) */
-export interface AuthCallbackResponse {
+/** Ответ POST /api/v1/login — только токен (Sanctum: "{id}|{plain_text_token}") */
+export interface LoginResponse {
+  token: string;
+}
+
+/** Ответ GET /api/v1/me — данные текущего пользователя (БЕЗ токена и БЕЗ обёртки data) */
+export interface MeResponse {
   name: string;
-  token: string; // формат Sanctum: "{id}|{plain_text_token}"
   profile: Profile;
   filter: GeoFilter;
   has_feedback: boolean;

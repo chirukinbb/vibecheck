@@ -10,13 +10,15 @@ export default function BootstrapScreen() {
     const { token } = useLocalSearchParams<{ token: string }>();
     const router = useRouter();
 
-    const { loginWithToken } = useAuthStore();
+    const {loginWithToken} = useAuthStore();
     const fetchCategories = useCategoriesStore((state) => state.fetchCategories);
     const fetchLanguages = useLanguagesStore((state) => state.fetchLanguages);
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const didRunRef = useRef(false);
+
+    const filter = useAuthStore((state) => state.filter);
 
     useEffect(() => {
         if (didRunRef.current) return;
@@ -45,8 +47,12 @@ export default function BootstrapScreen() {
                 ]);
 
                 console.log('Bootstrap completed')
+                console.log('Filter:', filter)
 
-                router.replace('/(tabs)');
+                if (filter === null)
+                    router.replace('/(tabs)/profile');
+                else
+                    router.replace('/(tabs)');
             } catch (e: any) {
                 setError(e?.message ?? 'Не удалось загрузить данные аккаунта');
                 setTimeout(() => {

@@ -1,6 +1,6 @@
 // src/constants/mock-data.ts — хардкод-объекты для всех экранов
 
-import type {AuthCallbackResponse} from '@/types/auth';
+import type {MeResponse} from '@/types/auth';
 import type {Category} from '@/types/category';
 import type {Event} from '@/types/event';
 import type {GeoFilter} from '@/types/filter';
@@ -43,8 +43,7 @@ export const MOCK_EVENTS: Event[] = [
     reserved: 12,
     author: {
       name: 'Анна Соколова',
-      phone: '+79031234567',
-      country_phone_code: '+7',
+      avatar_url: null,
       languages: ['ru', 'en'],
       bio: 'Сертифицированный инструктор по йоге, 10 лет практики',
     },
@@ -71,8 +70,7 @@ export const MOCK_EVENTS: Event[] = [
     reserved: 38,
     author: {
       name: 'Игорь Левин',
-      phone: '+79035551234',
-      country_phone_code: '+7',
+      avatar_url: null,
       languages: ['ru'],
       bio: 'Джазовый пианист и аранжировщик',
     },
@@ -98,8 +96,7 @@ export const MOCK_EVENTS: Event[] = [
     reserved: 87,
     author: {
       name: 'Дмитрий Волков',
-      phone: '+79164567890',
-      country_phone_code: '+7',
+      avatar_url: null,
       languages: ['ru', 'en'],
       bio: 'ML Engineer, ex-Яндекс',
     },
@@ -126,8 +123,7 @@ export const MOCK_EVENTS: Event[] = [
     reserved: 5,
     author: {
       name: 'Мария Гончарова',
-      phone: '+79213456789',
-      country_phone_code: '+7',
+      avatar_url: null,
       languages: ['ru'],
       bio: 'Художник-керамист, выпускница Мухинского училища',
     },
@@ -153,8 +149,7 @@ export const MOCK_EVENTS: Event[] = [
     reserved: 22,
     author: {
       name: 'Алексей Смирнов',
-      phone: '+79857654321',
-      country_phone_code: '+7',
+      avatar_url: null,
       languages: ['ru', 'en'],
       bio: 'Основатель стартап-студии, бизнес-ангел',
     },
@@ -181,8 +176,7 @@ export const MOCK_EVENTS: Event[] = [
     reserved: 14,
     author: {
       name: 'Екатерина Виноградова',
-      phone: '+79038889900',
-      country_phone_code: '+7',
+      avatar_url: null,
       languages: ['ru', 'fr'],
       bio: 'Сомелье WSET Level 3, преподаватель винной школы',
     },
@@ -198,27 +192,23 @@ export const MOCK_EVENTS: Event[] = [
 
 export const MOCK_PROFILE: Profile = {
   name: 'Богдан',
-  phone: '+79031234567',
-  country_phone_code: '+7',
-  country_phone_iso: 'RU',
+  avatar_url: null,
   languages: ['ru', 'en'],
   bio: 'Люблю активный отдых и технологии. Всегда открыт к новым знакомствам.',
-  avatar: null,
 };
 
 // ─── Гео-фильтр ───────────────────────────────────────────────────────
 
 export const MOCK_FILTER: GeoFilter = {
-  center: {lat: 55.7558, lng: 37.6173},
+  center: [55.7558, 37.6173],
   radius: 10,
   categories: [1, 2, 3, 6, 10],
 };
 
-// ─── Ответ авторизации ──────────────────────────────────────────────
+// ─── Ответ /me ────────────────────────────────────────────────────────
 
-export const MOCK_AUTH_RESPONSE: AuthCallbackResponse = {
+export const MOCK_AUTH_RESPONSE: MeResponse = {
   name: 'Богдан',
-  token: '1|abcdef1234567890',
   profile: MOCK_PROFILE,
   filter: MOCK_FILTER,
   has_feedback: false,
@@ -227,48 +217,6 @@ export const MOCK_AUTH_RESPONSE: AuthCallbackResponse = {
 // ─── Языки (для профиля) ─────────────────────────────────────────────
 
 export const AVAILABLE_LANGUAGES: { code: string; label: string }[] = [
-  {code: 'ru', label: 'Русский'},
-  {code: 'en', label: 'English'},
-  {code: 'es', label: 'Español'},
-  {code: 'fr', label: 'Français'},
-  {code: 'de', label: 'Deutsch'},
-  {code: 'zh', label: '中文'},
-  {code: 'ru', label: 'Русский'},
-  {code: 'en', label: 'English'},
-  {code: 'es', label: 'Español'},
-  {code: 'fr', label: 'Français'},
-  {code: 'de', label: 'Deutsch'},
-  {code: 'zh', label: '中文'},
-  {code: 'ru', label: 'Русский'},
-  {code: 'en', label: 'English'},
-  {code: 'es', label: 'Español'},
-  {code: 'fr', label: 'Français'},
-  {code: 'de', label: 'Deutsch'},
-  {code: 'zh', label: '中文'},
-  {code: 'ru', label: 'Русский'},
-  {code: 'en', label: 'English'},
-  {code: 'ru', label: 'Русский'},
-  {code: 'en', label: 'English'},
-  {code: 'es', label: 'Español'},
-  {code: 'fr', label: 'Français'},
-  {code: 'de', label: 'Deutsch'},
-  {code: 'zh', label: '中文'},
-  {code: 'ru', label: 'Русский'},
-  {code: 'en', label: 'English'},
-  {code: 'es', label: 'Español'},
-  {code: 'fr', label: 'Français'},
-  {code: 'de', label: 'Deutsch'},
-  {code: 'zh', label: '中文'},
-  {code: 'es', label: 'Español'},
-  {code: 'fr', label: 'Français'},
-  {code: 'de', label: 'Deutsch'},
-  {code: 'zh', label: '中文'},
-  {code: 'ru', label: 'Русский'},
-  {code: 'en', label: 'English'},
-  {code: 'es', label: 'Español'},
-  {code: 'fr', label: 'Français'},
-  {code: 'de', label: 'Deutsch'},
-  {code: 'zh', label: '中文'},
   {code: 'ru', label: 'Русский'},
   {code: 'en', label: 'English'},
   {code: 'es', label: 'Español'},

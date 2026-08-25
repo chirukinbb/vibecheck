@@ -18,13 +18,13 @@ export const useFilterStore = create<FilterState>((set) => ({
   saveFilter: async (dto) => {
     set({isUpdating: true, error: null});
     try {
-      const res = await updateFilter(dto);
+      const res = (await updateFilter(dto)).data;
       // Синхронизируем с authStore — фильтр обновлён на сервере,
       // категории сохраняем локально, центр появится при следующем fetch
       useAuthStore.getState().setFilter({
-        center: useAuthStore.getState().filter?.center ?? null,
-        radius: dto.radius,
-        categories: dto.categories,
+        center: res.center ?? null,
+        radius: res.radius,
+        categories: res.categories,
       });
       return res.message;
     } catch (e: any) {

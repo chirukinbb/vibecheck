@@ -7,8 +7,8 @@ export type {
 } from './common';
 
 export type {
-    AuthCallbackResponse, AuthProvider, LoginCredentials,
-    RegisterCredentials
+    AuthProvider, LoginCredentials,
+    LoginResponse, MeResponse, RegisterCredentials
 } from './auth';
 
 export type { Profile, ProfileUpdateDTO } from './profile';
@@ -18,6 +18,7 @@ export type { FilterUpdateDTO, GeoCenter, GeoFilter } from './filter';
 export type {
     CreateEventDTO, Event,
     EventAuthor,
+    EventListItem,
     Tag, UpdateEventDTO
 } from './event';
 
@@ -35,4 +36,3 @@ export type {
     EventNotificationData,
     FcmPayload, RefreshNotificationData
 } from './fcm';
-

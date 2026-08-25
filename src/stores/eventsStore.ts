@@ -1,20 +1,20 @@
 // src/stores/eventsStore.ts — события: список, пагинация, CRUD
 import {create} from 'zustand';
 import {
-    createEvent,
-    deleteEvent,
-    getEvent,
-    getEvents,
-    submitMemberFeedback,
-    subscribeToEvent,
-    unsubscribeFromEvent,
-    updateEvent,
+  createEvent,
+  deleteEvent,
+  getEvent,
+  getEvents,
+  submitMemberFeedback,
+  subscribeToEvent,
+  unsubscribeFromEvent,
+  updateEvent,
 } from '../api/events';
-import type {CreateEventDTO, Event, MemberFeedbackDTO, PaginationMeta, UpdateEventDTO} from '../types';
+import type {CreateEventDTO, Event, EventListItem, MemberFeedbackDTO, PaginationMeta, UpdateEventDTO} from '../types';
 
 interface EventsState {
   // ─── Список ───
-  events: Event[];
+  events: EventListItem[];
   meta: PaginationMeta | null;
 
   // ─── Просмотр одного ───
@@ -174,7 +174,7 @@ export const useEventsStore = create<EventsState>((set, get) => ({
       // Обновить reserved локально
       set((s) => ({
         events: s.events.map((ev) =>
-            ev.id === eventId ? {...ev, reserved: ev.reserved + 1} : ev,
+            ev.id === eventId ? {...ev, reserved: (ev.reserved ?? 0) + 1} : ev,
         ),
       }));
       return res.message;
@@ -193,7 +193,7 @@ export const useEventsStore = create<EventsState>((set, get) => ({
       const res = await unsubscribeFromEvent(eventId, memberId);
       set((s) => ({
         events: s.events.map((ev) =>
-            ev.id === eventId ? {...ev, reserved: Math.max(0, ev.reserved - 1)} : ev,
+            ev.id === eventId ? {...ev, reserved: Math.max(0, (ev.reserved ?? 0) - 1)} : ev,
         ),
       }));
       return res.message;

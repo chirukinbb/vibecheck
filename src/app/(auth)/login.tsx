@@ -8,12 +8,10 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {loginWithEmail, loginWithOAuth, registerWithEmail} from '@/api/auth';
 import {API_URL} from '@/api/client';
 import {Spacing} from '@/constants/theme';
-import {useAuthStore} from '@/stores/authStore';
 
 export default function LoginScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const {login} = useAuthStore();
 
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
@@ -32,22 +30,20 @@ export default function LoginScreen() {
     setFeedback(null);
 
     try {
-      const response = mode === 'login'
-          ? await loginWithEmail({email: email.trim(), password})
-          : await registerWithEmail({name: name.trim(), email: email.trim()});
-
-      await login(response);
-      setFeedback({
-        type: 'success',
-        text: mode === 'login' ? 'Вы успешно вошли в аккаунт' : 'Регистрация завершена успешно',
-      });
-
-      setIsSubmitting(true);
-
-      try {
-        router.replace(`/bootstrap/${response.data.token}`);
-      } finally {
-        setIsSubmitting(false);
+      if (mode === 'login') {
+        // Вход возвращает только токен → переходим на bootstrap для загрузки /me
+        const {token} = await loginWithEmail({email: email.trim(), password});
+        console.log(token)
+        setFeedback({type: 'success', text: 'Вы успешно вошли в аккаунт'});
+        router.replace(`/bootstrap/${token}`);
+      } else {
+        // Регистрация НЕ возвращает токен — пароль придёт на email
+        const res = await registerWithEmail({name: name.trim(), email: email.trim()});
+        setFeedback({
+          type: 'success',
+          text: res.message || 'Регистрация завершена. Пароль отправлен на вашу почту.',
+        });
+        setMode('login');
       }
     } catch (error: any) {
       let serverMessage = 'Не удалось выполнить вход';

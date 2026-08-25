@@ -16,7 +16,6 @@ import {useCategoriesStore, useEventsStore} from '@/stores';
 
 export default function CreateEventScreen() {
   const theme = useTheme();
-  const {events} = useEventsStore();
   const categories = useCategoriesStore((state) => state.categories);
   const fetchCategories = useCategoriesStore((state) => state.fetchCategories);
   const addEvent = useEventsStore((state) => state.addEvent);
@@ -26,9 +25,9 @@ export default function CreateEventScreen() {
     void fetchCategories();
   }, [fetchCategories]);
 
-  const SUGGESTED_TAGS = Array.from(
-      new Set(events.flatMap((event) => event.tags?.map((t) => t.name) ?? [])),
-  ).sort();
+  // GET /events возвращает события в сокращённом виде (без тегов),
+  // поэтому подсказки тегов не извлекаются из списка. Пользователь вводит теги вручную.
+  const SUGGESTED_TAGS: string[] = [];
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
