@@ -1,5 +1,7 @@
 // src/types/event.ts — события
 
+import {Profile} from "@/types/profile";
+
 /** Автор события (вложенный объект в ответе GET /api/v1/event/{id}) */
 export interface EventAuthor {
     name: string;
@@ -43,9 +45,16 @@ export interface Event extends EventBase {
     /** Профиль автора */
     author: EventAuthor;
     /** Теги (если есть) */
-    tags?: Tag[];
+    tags: Tag[];
     /** Состоялось ли событие */
     is_happened?: number | null;
+    member: number | null;
+    members: Member[];
+}
+
+export interface Member {
+    id: number;
+    profile: Profile;
 }
 
 /** Тег */
@@ -58,10 +67,8 @@ export interface Tag {
 export interface CreateEventDTO {
     title: string;
     description: string;
-    /** Картинка (webp, до 1024 КБ) — одно из thumbnail или thumb_path обязательно */
-    thumbnail?: File;
     /** Альтернатива thumbnail — путь к файлу */
-    thumb_path?: string;
+    thumb_path: string;
     address: string;
     category_id: number;
     slots: number;

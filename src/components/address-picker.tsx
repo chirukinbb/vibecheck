@@ -3,17 +3,20 @@ import {useEffect, useRef, useState} from 'react';
 import {Pressable, ScrollView, StyleSheet, View} from 'react-native';
 import {ActivityIndicator, Modal, Portal, Searchbar, Text, TextInput, useTheme} from 'react-native-paper';
 
+export type Coordinates = [number, number]; // [latitude, longitude]
+
 interface AddressSuggestion {
   id: string;
   label: string;
   fullAddress: string;
+  coordinates: Coordinates;
 }
 
 interface AddressPickerProps {
   label: string;
   placeholder?: string;
-  value: string;
-  onChangeText: (text: string) => void;
+  value: Coordinates | null;
+  onChangeCoordinates: (coords: Coordinates, addressLabel?: string) => void;
   onUseCurrentLocation: () => void | Promise<void>;
   locationLoading?: boolean;
 }
@@ -24,22 +27,62 @@ export default function AddressPicker({
                                         label,
                                         placeholder,
                                         value,
-                                        onChangeText,
+                                        onChangeCoordinates,
                                         onUseCurrentLocation,
                                         locationLoading = false,
                                       }: AddressPickerProps) {
   const theme = useTheme();
   const [visible, setVisible] = useState(false);
-  const [inputValue, setInputValue] = useState(value);
+  const [displayText, setDisplayText] = useState('');
+  const [inputText, setInputText] = useState('');
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorText, setErrorText] = useState('');
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // 1. При получении/изменении координат делаем Reverse Geocoding для отображения понятного адреса в TextInput
   useEffect(() => {
-    setInputValue(value);
+    if (!value || (value[0] === 0 && value[1] === 0)) {
+      setDisplayText('');
+      return;
+    }
+
+    let isMounted = true;
+    const fetchAddressFromCoords = async () => {
+      try {
+        const [lat, lng] = value;
+        const url = `https://api.tomtom.com/search/2/reverseGeocode/${lat},${lng}.json?key=${TOMTOM_API_KEY}&language=ru-RU`;
+        const response = await fetch(url);
+        if (response.ok) {
+          const data = await response.json();
+          const address = data.addresses?.[0]?.address?.freeformAddress;
+          if (address && isMounted) {
+            setDisplayText(address);
+          } else if (isMounted) {
+            setDisplayText(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+          }
+        }
+      } catch {
+        if (isMounted) {
+          setDisplayText(`${value[0].toFixed(5)}, ${value[1].toFixed(5)}`);
+        }
+      }
+    };
+
+    fetchAddressFromCoords();
+
+    return () => {
+      isMounted = false;
+    };
   }, [value]);
 
+  // 2. Обработка открытия модального окна
+  const handleOpenModal = () => {
+    setInputText(displayText);
+    setVisible(true);
+  };
+
+  // 3. Поиск подсказок TomTom при вводе
   useEffect(() => {
     if (!visible) {
       if (timeoutRef.current) {
@@ -48,7 +91,7 @@ export default function AddressPicker({
       return;
     }
 
-    const text = inputValue.trim();
+    const text = inputText.trim();
     if (!text || text.length < 2) {
       setSuggestions([]);
       setLoading(false);
@@ -83,7 +126,9 @@ export default function AddressPicker({
                   item.name ||
                   'Адрес';
 
-              if (!label) {
+              // Извлекаем координаты из ответа TomTom
+              const position = item.position;
+              if (!label || !position || typeof position.lat !== 'number' || typeof position.lon !== 'number') {
                 return null;
               }
 
@@ -91,13 +136,14 @@ export default function AddressPicker({
                 id: `${item.id || item.type || 'suggestion'}-${index}`,
                 label,
                 fullAddress: label,
+                coordinates: [position.lat, position.lon] as Coordinates,
               } as AddressSuggestion;
             })
             .filter((item: AddressSuggestion | null): item is AddressSuggestion => Boolean(item));
 
         setSuggestions(nextSuggestions);
-        setErrorText(nextSuggestions.length > 0 ? '' : '');
-      } catch (error) {
+        setErrorText('');
+      } catch {
         setSuggestions([]);
         setErrorText('Не удалось получить подсказки. Проверьте соединение или попробуйте позже.');
       } finally {
@@ -110,26 +156,22 @@ export default function AddressPicker({
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [inputValue, visible]);
+  }, [inputText, visible]);
 
-  const handleTextChange = (text: string) => {
-    setInputValue(text);
-    onChangeText(text);
-  };
-
-  const handleSelectSuggestion = (text: string) => {
-    handleTextChange(text);
+  // 4. Выбор адреса из списка
+  const handleSelectSuggestion = (suggestion: AddressSuggestion) => {
+    setDisplayText(suggestion.fullAddress);
+    onChangeCoordinates(suggestion.coordinates, suggestion.fullAddress);
     setVisible(false);
   };
 
   return (
       <View style={styles.container}>
-        <Pressable onPress={() => setVisible(true)} style={styles.pressableField}>
+        <Pressable onPress={handleOpenModal} style={styles.pressableField}>
           <TextInput
               mode="outlined"
               label={label}
-              value={inputValue}
-              onChangeText={handleTextChange}
+              value={displayText}
               editable={false}
               pointerEvents="none"
               placeholder={placeholder}
@@ -151,8 +193,8 @@ export default function AddressPicker({
           >
             <Searchbar
                 placeholder="Начните вводить адрес..."
-                value={inputValue}
-                onChangeText={handleTextChange}
+                value={inputText}
+                onChangeText={setInputText}
                 style={styles.searchbar}
                 autoFocus
             />
@@ -165,14 +207,14 @@ export default function AddressPicker({
             ) : null}
 
             <ScrollView style={styles.list} nestedScrollEnabled>
-              {!loading && suggestions.length === 0 && inputValue.trim().length >= 2 ? (
+              {!loading && suggestions.length === 0 && inputText.trim().length >= 2 ? (
                   <Text style={styles.emptyText}>{errorText || 'Подходящих вариантов нет'}</Text>
               ) : null}
 
               {suggestions.map((suggestion) => (
                   <Pressable
                       key={suggestion.id}
-                      onPress={() => handleSelectSuggestion(suggestion.fullAddress)}
+                      onPress={() => handleSelectSuggestion(suggestion)}
                       style={({pressed}) => [
                         styles.suggestion,
                         pressed && styles.suggestionPressed,

@@ -21,6 +21,7 @@ import PageLayout from '@/components/page-layout';
 import {formatDate} from '@/constants/mock-data';
 import {MaxContentWidth, Spacing} from '@/constants/theme';
 import {useEventsStore} from '@/stores';
+import {subscribeToEvent} from "@/api";
 
 const TOMTOM_API_KEY = process.env.EXPO_PUBLIC_TOMTOM_API_KEY || process.env.TOMTOM_API_KEY || 'BHEiGUcbB06ofsGybuUFTFReGMYYkoy9';
 
@@ -247,7 +248,7 @@ export default function EventDetailScreen() {
           <View style={[styles.footer, {paddingBottom: insets.bottom || Spacing.three}]}>
             <Button
                 mode="contained"
-                onPress={() => console.log('Запись на событие:', event.id)}
+                onPress={() => subscribeToEvent(event.id)}
                 disabled={isFull}
                 style={styles.bottomButton}
             >
@@ -398,6 +399,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#E6E9F2',
     paddingTop: Spacing.three,
+    paddingBottom: Spacing.three,
   },
   bottomButton: {
     width: '100%',

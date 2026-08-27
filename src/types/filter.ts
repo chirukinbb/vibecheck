@@ -18,7 +18,7 @@ export interface GeoFilter {
 /** Тело запроса на обновление гео-фильтра (PATCH /api/v1/filter) */
 export interface FilterUpdateDTO {
     /** Адрес строкой — сервер геокодирует через TomTom и сохраняет в center */
-    address: string;
+    center: GeoCenter;
     /** Радиус в километрах */
     radius: number;
     /** ID категорий для фильтрации */

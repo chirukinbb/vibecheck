@@ -18,8 +18,21 @@ export function getEvents(params?: {
     page?: number;
     per_page?: number;
 }): Promise<PaginatedResponse<EventListItem>> {
-    console.log('Fetching events with params:', params);
     return apiClient.get<PaginatedResponse<EventListItem>>('/events', {params}).then((r) => r.data);
+}
+
+export function getOrganizingEvents(params?: {
+    page?: number;
+    per_page?: number;
+}): Promise<PaginatedResponse<EventListItem>> {
+    return apiClient.get<PaginatedResponse<EventListItem>>('/events/organizing', {params}).then((r) => r.data);
+}
+
+export function getAttendingEvents(params?: {
+    page?: number;
+    per_page?: number;
+}): Promise<PaginatedResponse<EventListItem>> {
+    return apiClient.get<PaginatedResponse<EventListItem>>('/events/attending', {params}).then((r) => r.data);
 }
 
 // ─── Одно событие ────────────────────────────────────────────────────
@@ -36,8 +49,19 @@ export function createEvent(dto: CreateEventDTO): Promise<SuccessResponse> {
     const fd = new FormData();
     fd.append('title', dto.title);
     fd.append('description', dto.description);
-    if (dto.thumbnail) fd.append('thumbnail', dto.thumbnail);
-    if (dto.thumb_path) fd.append('thumb_path', dto.thumb_path);
+
+    const filename = dto.thumb_path.split('/').pop() || 'avatar.jpg';
+    const match = /\.(\w+)$/.exec(filename);
+    const type = match ? `image/${match[1] === 'jpg' ? 'jpeg' : match[1]}` : 'image/jpeg';
+
+    // 3. Формируем объект файла для DTO
+    const thumbnail = {
+        uri: dto.thumb_path,             // Локальный путь пути file://...
+        name: filename,        // Имя файла (например, avatar.jpg или avatar.webp)
+        type: type,            // MIME-тип (например, image/webp или image/jpeg)
+    };
+
+    fd.append('thumbnail', thumbnail);
     fd.append('address', dto.address);
     fd.append('category_id', String(dto.category_id));
     fd.append('slots', String(dto.slots));

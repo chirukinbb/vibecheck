@@ -56,7 +56,7 @@ export default function CreateEventScreen() {
       description,
       category_id: categoryId,
       address,
-      planing_time: `${String(planingTime.getDate()).padStart(2, '0')}/${String(planingTime.getMonth() + 1).padStart(2, '0')}/${planingTime.getFullYear()} ${String(planingTime.getHours()).padStart(2, '0')}:${String(planingTime.getMinutes()).padStart(2, '0')}`,
+      planing_time: planingTime ? Math.floor(planingTime.getTime() / 1000) : null,
       slots: Number(slots),
       tags,
       thumb_path: thumbnail ?? undefined,

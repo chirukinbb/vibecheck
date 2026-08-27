@@ -5,6 +5,7 @@ import {ActivityIndicator, StyleSheet, Text, View} from 'react-native';
 import {useAuthStore} from '@/stores/authStore';
 import {useCategoriesStore} from '@/stores/categoriesStore';
 import {useLanguagesStore} from '@/stores/languagesStore';
+import {useTagsStore} from "@/stores/tagsStore";
 
 export default function BootstrapScreen() {
     const { token } = useLocalSearchParams<{ token: string }>();
@@ -13,12 +14,14 @@ export default function BootstrapScreen() {
     const {loginWithToken} = useAuthStore();
     const fetchCategories = useCategoriesStore((state) => state.fetchCategories);
     const fetchLanguages = useLanguagesStore((state) => state.fetchLanguages);
+    const fetchTags = useTagsStore((state) => state.fetchTags);
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const didRunRef = useRef(false);
 
-    const filter = useAuthStore((state) => state.filter);
+    const filter = useAuthStore((state) => state.filter);// Проверяем, пуст ли фильтр: объекта нет ИЛИ все его поля равны null/undefined
+    const isFilterEmpty = !filter || Object.values(filter).every((val) => val === null || val === undefined);
 
     useEffect(() => {
         if (didRunRef.current) return;
@@ -44,12 +47,10 @@ export default function BootstrapScreen() {
                 await Promise.all([
                     fetchCategories(),
                     fetchLanguages(),
+                    fetchTags()
                 ]);
 
-                console.log('Bootstrap completed')
-                console.log('Filter:', filter)
-
-                if (filter === null)
+                if (isFilterEmpty)
                     router.replace('/(tabs)/profile');
                 else
                     router.replace('/(tabs)');

@@ -26,5 +26,4 @@ export interface MeResponse {
   name: string;
   profile: Profile;
   filter: GeoFilter;
-  has_feedback: boolean;
 }

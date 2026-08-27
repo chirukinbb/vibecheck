@@ -3,8 +3,10 @@ import {create} from 'zustand';
 import {
   createEvent,
   deleteEvent,
+  getAttendingEvents,
   getEvent,
   getEvents,
+  getOrganizingEvents,
   submitMemberFeedback,
   subscribeToEvent,
   unsubscribeFromEvent,
@@ -28,6 +30,8 @@ interface EventsState {
 
   // ─── Действия: список ───
   fetchEvents: (page?: number) => Promise<void>;
+  fetchOrganizingEvents: (page?: number) => Promise<void>;
+  fetchAttendingEvents: (page?: number) => Promise<void>;
   refreshEvents: () => Promise<void>;
   fetchNextPage: () => Promise<void>;
 
@@ -61,6 +65,32 @@ export const useEventsStore = create<EventsState>((set, get) => ({
     set({isLoadingList: true, error: null});
     try {
       const res = await getEvents({page});
+      console.log('Fetched events:', res);
+      set({events: res.data, meta: res.meta});
+    } catch (e: any) {
+      set({error: e?.message ?? 'Ошибка загрузки событий'});
+    } finally {
+      set({isLoadingList: false});
+    }
+  },
+
+  fetchOrganizingEvents: async (page = 1) => {
+    set({isLoadingList: true, error: null});
+    try {
+      const res = await getOrganizingEvents({page});
+      console.log('Fetched events:', res);
+      set({events: res.data, meta: res.meta});
+    } catch (e: any) {
+      set({error: e?.message ?? 'Ошибка загрузки событий'});
+    } finally {
+      set({isLoadingList: false});
+    }
+  },
+
+  fetchAttendingEvents: async (page = 1) => {
+    set({isLoadingList: true, error: null});
+    try {
+      const res = await getAttendingEvents({page});
       console.log('Fetched events:', res);
       set({events: res.data, meta: res.meta});
     } catch (e: any) {

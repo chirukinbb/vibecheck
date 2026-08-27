@@ -48,12 +48,11 @@ export default function ProfileScreen() {
   // ─── Модал выбора источника ────────────────────────────
 
   // ─── Фильтр ──────────────────────────────────────────────────
-  const [filterAddress, setFilterAddress] = useState('Москва');
+  const [filterAddress, setFilterAddress] = useState(filter?.center ?? [55.7519, 37.6173] as [number, number]);
   const [radius, setRadius] = useState(String(filter?.radius ?? 10));
   const [selectedCategories, setSelectedCategories] = useState<number[]>(filter?.categories ?? []);
 
   useEffect(() => {
-    console.log(profile)
     if (filter?.radius != null) {
       setRadius(String(filter.radius));
     }
@@ -78,7 +77,7 @@ export default function ProfileScreen() {
   const handleSaveFilter = async () => {
     const nextRadius = Number(radius) || 10;
     const message = await saveFilter({
-      address: filterAddress.trim() || 'Москва',
+      center: filterAddress,
       radius: nextRadius,
       categories: selectedCategories,
     });
@@ -111,7 +110,7 @@ export default function ProfileScreen() {
         address.region,
         address.country,
       ].filter(Boolean);
-      setFilterAddress(parts.join(', ') || String(position.coords.latitude) + ', ' + String(position.coords.longitude));
+      setFilterAddress([Number(position.coords.latitude), Number(position.coords.longitude)] as [number, number]);
     } catch (e) {
       alert('Не удалось определить местоположение');
     } finally {
@@ -129,7 +128,7 @@ export default function ProfileScreen() {
   };
 
   const insets = useSafeAreaInsets();
-  console.log(avatarUri)
+
   return (
       <PageLayout title="Профиль">
         <View style={styles.screen}>
@@ -239,7 +238,7 @@ export default function ProfileScreen() {
                           label="Адрес"
                           placeholder="Москва"
                           value={filterAddress}
-                          onChangeText={setFilterAddress}
+                          onChangeCoordinates={setFilterAddress}
                           onUseCurrentLocation={handleUseCurrentLocation}
                           locationLoading={locationLoading}
                       />

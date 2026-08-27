@@ -78,10 +78,10 @@ Content-Type: `application/json`
 
 ```json
 {
-  "message": "The email field is required.",
-  "errors": {
-    "email": ["The email field is required."]
-  }
+    "message": "The email field is required.",
+    "errors": {
+        "email": ["The email field is required."]
+    }
 }
 ```
 
@@ -89,10 +89,10 @@ Content-Type: `application/json`
 
 ```json
 {
-  "message": "The email field must be a valid email address.",
-  "errors": {
-    "email": ["The email field must be a valid email address."]
-  }
+    "message": "The email field must be a valid email address.",
+    "errors": {
+        "email": ["The email field must be a valid email address."]
+    }
 }
 ```
 
@@ -100,10 +100,10 @@ Content-Type: `application/json`
 
 ```json
 {
-  "message": "The password field is required.",
-  "errors": {
-    "password": ["The password field is required."]
-  }
+    "message": "The password field is required.",
+    "errors": {
+        "password": ["The password field is required."]
+    }
 }
 ```
 
@@ -111,11 +111,11 @@ Content-Type: `application/json`
 
 ```json
 {
-  "message": "The email field is required. (and 1 more error)",
-  "errors": {
-    "email": ["The email field is required."],
-    "password": ["The password field is required."]
-  }
+    "message": "The email field is required. (and 1 more error)",
+    "errors": {
+        "email": ["The email field is required."],
+        "password": ["The password field is required."]
+    }
 }
 ```
 
@@ -131,8 +131,8 @@ Content-Type: `application/json`
 
 ```json
 {
-  "name": "John Doe",
-  "email": "user@example.com"
+    "name": "John Doe",
+    "email": "user@example.com"
 }
 ```
 
@@ -140,7 +140,7 @@ Content-Type: `application/json`
 
 ```json
 {
-  "message": "Registration successful! Please check your email for the password."
+    "message": "Registration successful! Please check your email for the password."
 }
 ```
 
@@ -150,7 +150,7 @@ Content-Type: `application/json`
 
 ```json
 {
-  "message": "Try later"
+    "message": "Try later"
 }
 ```
 
@@ -160,10 +160,10 @@ Email уже зарегистрирован:
 
 ```json
 {
-  "message": "The email has already been taken.",
-  "errors": {
-    "email": ["The email has already been taken."]
-  }
+    "message": "The email has already been taken.",
+    "errors": {
+        "email": ["The email has already been taken."]
+    }
 }
 ```
 
@@ -171,10 +171,10 @@ Email уже зарегистрирован:
 
 ```json
 {
-  "message": "The name field is required.",
-  "errors": {
-    "name": ["The name field is required."]
-  }
+    "message": "The name field is required.",
+    "errors": {
+        "name": ["The name field is required."]
+    }
 }
 ```
 
@@ -182,10 +182,10 @@ Email уже зарегистрирован:
 
 ```json
 {
-  "message": "The email field is required.",
-  "errors": {
-    "email": ["The email field is required."]
-  }
+    "message": "The email field is required.",
+    "errors": {
+        "email": ["The email field is required."]
+    }
 }
 ```
 
@@ -256,7 +256,7 @@ Authorization: Bearer 1|abc123def456...
 
 ```json
 {
-  "token": "1|abc123def456..."
+    "token": "1|abc123def456..."
 }
 ```
 
@@ -264,19 +264,18 @@ Authorization: Bearer 1|abc123def456...
 
 ```json
 {
-  "name": "John Doe",
-  "profile": {
     "name": "John Doe",
-    "avatar_url": null,
-    "languages": null,
-    "bio": null
-  },
-  "filter": {
-    "center": null,
-    "radius": null,
-    "categories": null
-  },
-  "has_feedback": false
+    "profile": {
+        "name": "John Doe",
+        "avatar_url": null,
+        "languages": null,
+        "bio": null
+    },
+    "filter": {
+        "center": null,
+        "radius": null,
+      "categories": null
+    }
 }
 ```
 
@@ -288,32 +287,32 @@ Authorization: Bearer 1|abc123def456...
 
 ```json
 {
-  "data": [
-    {
-      "id": 1,
-      "title": "Название события",
-      "thumbnail_url": "http://<HOST>:8080/storage/thumbnails/xxx.webp",
-      "category": "Спорт",
-      "description": "Описание события",
-      "slots": 10,
-      "reserved": 3,
-      "planing_time": 1720000000
+    "data": [
+        {
+            "id": 1,
+            "title": "Название события",
+            "thumbnail_url": "http://<HOST>:8080/storage/thumbnails/xxx.webp",
+            "category": "Спорт",
+            "description": "Описание события",
+            "slots": 10,
+            "reserved": 3,
+            "planing_time": 1720000000
+        }
+    ],
+    "links": {
+        "first": "http://<HOST>:8080/api/v1/events?page=1",
+        "last": "http://<HOST>:8080/api/v1/events?page=1",
+        "prev": null,
+        "next": null
+    },
+    "meta": {
+        "current_page": 1,
+        "from": 1,
+        "last_page": 1,
+        "per_page": 15,
+        "to": 3,
+        "total": 3
     }
-  ],
-  "links": {
-    "first": "http://<HOST>:8080/api/v1/events?page=1",
-    "last": "http://<HOST>:8080/api/v1/events?page=1",
-    "prev": null,
-    "next": null
-  },
-  "meta": {
-    "current_page": 1,
-    "from": 1,
-    "last_page": 1,
-    "per_page": 15,
-    "to": 3,
-    "total": 3
-  }
 }
 ```
 
@@ -321,26 +320,46 @@ Authorization: Bearer 1|abc123def456...
 
 ```json
 {
-  "data": {
-    "id": 1,
-    "title": "...",
-    "category": "Спорт",
-    "thumbnail_url": "...",
-    "description": "...",
-    "coordinate_lat": "55.7558",
-    "coordinate_lng": "37.6173",
-    "country": "Russia",
-    "planing_time": 1720000000,
-    "slots": 10,
-    "address": "Москва, ул. Пушкина, д. 1",
-    "reserved": 3,
-    "author": {
-      "name": "John Doe",
-      "avatar_url": null,
-      "languages": ["en", "ru"],
-      "bio": "О себе"
+    "data": {
+        "id": 1,
+        "title": "...",
+        "category": "Спорт",
+        "thumbnail_url": "...",
+        "description": "...",
+        "coordinate_lat": "55.7558",
+      "coordinate_lng": "37.6173",
+      "country": "Russia",
+      "planing_time": 1720000000,
+      "slots": 10,
+      "reserved": 3,
+      "author": {
+        "name": "John Doe",
+        "avatar_url": null,
+        "languages": [
+          "en",
+          "ru"
+        ],
+        "bio": "О себе"
+      },
+      "member": null,
+      "members": [
+        {
+          "id": 7,
+          "profile": {
+            "name": "John Doe",
+            "avatar_url": null,
+            "languages": [
+              "en",
+              "ru"
+            ],
+            "bio": "О себе"
+          }
+        }
+      ],
+      "tags": [
+        "tag_name"
+      ]
     }
-  }
 }
 ```
 
@@ -348,7 +367,7 @@ Authorization: Bearer 1|abc123def456...
 
 ```json
 {
-  "message": "Event created successfully"
+    "message": "Event created successfully"
 }
 ```
 
@@ -373,12 +392,12 @@ Laravel возвращает ошибки валидации в формате:
 
 ```json
 {
-  "message": "The title field is required. (and 2 more errors)",
-  "errors": {
-    "title": ["The title field is required."],
-    "description": ["The description field is required."],
-    "planing_time": ["The planing time field is required."]
-  }
+    "message": "The title field is required. (and 2 more errors)",
+    "errors": {
+        "title": ["The title field is required."],
+        "description": ["The description field is required."],
+        "planing_time": ["The planing time field is required."]
+    }
 }
 ```
 
@@ -482,20 +501,19 @@ Laravel возвращает ошибки валидации в формате:
 
 **Валидация** (EventRequest):
 
-| Поле | Правила |
-|------|---------|
-| `title` | required, string |
-| `description` | required, string |
-| `thumbnail` | required_without:thumb_path, file, mimes:webp, max:1024 |
-| `thumb_path` | required_without:thumbnail, string |
-| `address` | required, string |
-| `category_id` | required, numeric |
-| `slots` | numeric |
-| `user_id` | numeric, exists:users,id |
-| `tags` | array |
-| `planing_time` | required, date_format:d/m/Y H:i |
+| Поле            | Правила                                                |
+|-----------------|--------------------------------------------------------|
+| `title`         | required, string                                       |
+| `description`   | required, string                                       |
+| `thumbnail`     | required_without:thumb_path, file, mimes:webp, max:1024 |
+| `thumbnail_url` | required_without:thumbnail, string                     |
+| `address`       | required, array                                       |
+| `category_id`   | required, numeric                                      |
+| `slots`         | numeric                                                |
+| `user_id`       | numeric, exists:users,id                               |
+| `tags`          | array                                                  |
+| `planing_time`  | required, date_format:Unix timestamp                   |
 
-> 📌 `thumbnail` и `thumb_path` — нужно ОДНО из двух
 
 **Права**: `api create event`
 
@@ -576,9 +594,9 @@ Laravel возвращает ошибки валидации в формате:
 
 ```json
 {
-  "is_happened": true,
-  "comment": "Крутое мероприятие!",
-  "mark": 9
+    "is_happened": true,
+    "comment": "Крутое мероприятие!",
+    "mark": 9
 }
 ```
 
@@ -694,7 +712,10 @@ Laravel возвращает ошибки валидации в формате:
 
 ```json
 {
-  "address": "Москва, Красная площадь",
+  "address": [
+    "center_lat",
+    "center_lng"
+  ],
   "radius": 50,
   "categories": [
     1,
@@ -708,7 +729,10 @@ Laravel возвращает ошибки валидации в формате:
 
 ```json
 {
-  "address": "Москва, Красная площадь",
+  "address": [
+    "center_lat",
+    "center_lng"
+  ],
   "radius": 50,
   "categories": [
     1,
@@ -728,7 +752,7 @@ Laravel возвращает ошибки валидации в формате:
 
 | Поле | Правила |
 |------|---------|
-| `address` | required, string |
+| `address` | required, array |
 | `radius` | required, numeric |
 | `categories` | required, array, min:1 |
 
@@ -746,7 +770,7 @@ Laravel возвращает ошибки валидации в формате:
 
 ```json
 {
-  "text": "Классное приложение!"
+    "text": "Классное приложение!"
 }
 ```
 

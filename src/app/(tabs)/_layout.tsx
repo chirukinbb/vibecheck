@@ -2,8 +2,19 @@
 import {Tabs} from 'expo-router';
 import {CommonActions} from '@react-navigation/native';
 import {BottomNavigation, Icon} from 'react-native-paper';
+import {useAuthStore} from "@/stores";
+import {useEffect} from "react";
 
 export default function TabsLayout() {
+    const filter = useAuthStore((state) => state.filter);// Проверяем, пуст ли фильтр: объекта нет ИЛИ все его поля равны null/undefined
+    const isFilterEmpty = !filter || Object.values(filter).every((val) => val === null || val === undefined);
+
+    useEffect(() => {
+        console.log('isFilterEmpty', isFilterEmpty);
+    }, [isFilterEmpty]);
+
+    const disableColor = '#ccc';
+
     return (
         <Tabs
             screenOptions={{
@@ -14,6 +25,14 @@ export default function TabsLayout() {
                     navigationState={state}
                     safeAreaInsets={insets}
                     onTabPress={({route, preventDefault}) => {
+                        // Блокируем клик ТОЛЬКО по задизейбленным табам, если фильтр пуст
+                        const isBlockedTab = route.name === 'index' || route.name === 'create';
+
+                        if (isFilterEmpty && isBlockedTab) {
+                            preventDefault();
+                            return;
+                        }
+
                         const event = navigation.emit({
                             type: 'tabPress',
                             target: route.key,
@@ -50,7 +69,7 @@ export default function TabsLayout() {
                 options={{
                     tabBarLabel: 'События',
                     tabBarIcon: ({color, size}) => (
-                        <Icon source="calendar-text" size={size} color={color}/>
+                        <Icon source="calendar-text" size={size} color={isFilterEmpty ? disableColor : color}/>
                     ),
                 }}
             />
@@ -59,7 +78,7 @@ export default function TabsLayout() {
                 options={{
                     tabBarLabel: 'Создать',
                     tabBarIcon: ({color, size}) => (
-                        <Icon source="plus-circle-outline" size={size} color={color}/>
+                        <Icon source="plus-circle-outline" size={size} color={isFilterEmpty ? disableColor : color}/>
                     ),
                 }}
             />

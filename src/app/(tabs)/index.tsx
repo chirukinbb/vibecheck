@@ -1,8 +1,8 @@
 // src/app/(tabs)/index.tsx — список событий
 import {router} from 'expo-router';
-import {useEffect} from 'react';
+import {useEffect, useState} from 'react';
 import {FlatList, StyleSheet, View} from 'react-native';
-import {Card, Chip, Icon, ProgressBar, Text, useTheme,} from 'react-native-paper';
+import {Card, Chip, Icon, ProgressBar, SegmentedButtons, Text, useTheme,} from 'react-native-paper';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import PageLayout from '@/components/page-layout';
@@ -10,25 +10,61 @@ import {formatDate} from '@/constants/mock-data';
 import {MaxContentWidth, Spacing} from '@/constants/theme';
 import {useAuthStore, useEventsStore} from '@/stores';
 
+type TabType = 'fetchEvents' | 'fetchOrganizingEvents' | 'fetchAttendingEvents';
+
 export default function EventsListScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const {events, isLoadingList, fetchEvents} = useEventsStore();
+  const [activeTab, setActiveTab] = useState<TabType>('fetchEvents');
+
+  // 1. Достаем нужные методы из store
+  const {
+    events,
+    isLoadingList,
+    fetchEvents,
+    fetchOrganizingEvents,
+    fetchAttendingEvents
+  } = useEventsStore();
+
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
-  useAuthStore((state) => console.log(state));
+  // Карта сопоставления значений табов с функциями загрузки
+  const fetchMap: Record<TabType, () => Promise<void>> = {
+    fetchEvents,
+    fetchOrganizingEvents,
+    fetchAttendingEvents,
+  };
 
+  // 2. Перезагружаем данные при изменении активного таба
   useEffect(() => {
     if (!isAuthenticated) {
       router.replace('/(auth)/login');
       return;
     }
 
-    void fetchEvents();
-  }, [fetchEvents, isAuthenticated]);
+    const loadData = fetchMap[activeTab];
+    if (loadData) {
+      void loadData();
+    }
+  }, [activeTab, fetchEvents, fetchOrganizingEvents, fetchAttendingEvents, isAuthenticated]);
+
+  const handleTabChange = (v: string) => {
+    const nextTab = v as TabType;
+    setActiveTab(nextTab);
+  };
 
   return (
       <PageLayout title="События">
+        <SegmentedButtons
+            value={activeTab}
+            onValueChange={handleTabChange}
+            style={[styles.segmented, {backgroundColor: theme.colors.surface}]}
+            buttons={[
+              {value: 'fetchEvents', label: 'Лента'},
+              {value: 'fetchOrganizingEvents', label: 'Автор'},
+              {value: 'fetchAttendingEvents', label: 'Гость'},
+            ]}
+        />
         <FlatList
             data={events}
             keyExtractor={(item) => String(item.id)}
@@ -38,7 +74,8 @@ export default function EventsListScreen() {
             ]}
             showsVerticalScrollIndicator={false}
             refreshing={isLoadingList}
-            onRefresh={() => void fetchEvents()}
+            /* 3. Pull-to-refresh вызывают функцию текущего выбранного таба */
+            onRefresh={() => void fetchMap[activeTab]()}
             ListEmptyComponent={
               isLoadingList
                   ? null
@@ -48,7 +85,7 @@ export default function EventsListScreen() {
                           Событий пока нет
                         </Text>
                       </View>
-                    )
+                  )
             }
             renderItem={({item}) => {
               const slotsLeft = item.slots - (item.reserved ?? 0);
@@ -153,11 +190,16 @@ const styles = StyleSheet.create({
   },
   thumb: {
     height: 180,
-    borderRadius: 0, // Чтобы обложка красиво подходила к краям карточки M3
+    borderRadius: 0,
   },
   cardBody: {
     gap: Spacing.two,
     paddingTop: Spacing.three,
+  },
+  segmented: {
+    paddingBottom: Spacing.three,
+    paddingRight: Spacing.three,
+    paddingLeft: Spacing.three
   },
   emptyState: {
     alignItems: 'center',

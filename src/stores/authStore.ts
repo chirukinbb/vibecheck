@@ -10,7 +10,6 @@ interface AuthState {
   name: string | null;
   profile: Profile | null;
   filter: GeoFilter | null;
-  hasFeedback: boolean;
 
   // ─── Состояние ───
   isAuthenticated: boolean;
@@ -35,7 +34,6 @@ export const useAuthStore = create<AuthState>((set) => ({
   name: null,
   profile: null,
   filter: null,
-  hasFeedback: false,
   isAuthenticated: false,
   isLoading: false,
 
@@ -51,7 +49,6 @@ export const useAuthStore = create<AuthState>((set) => ({
         name: user.name,
         profile: user.profile,
         filter: user.filter,
-        hasFeedback: user.has_feedback,
         isAuthenticated: true,
         isLoading: false,
       });
@@ -62,7 +59,6 @@ export const useAuthStore = create<AuthState>((set) => ({
         name: null,
         profile: null,
         filter: null,
-        hasFeedback: false,
         isAuthenticated: false,
         isLoading: false,
       });
@@ -77,7 +73,6 @@ export const useAuthStore = create<AuthState>((set) => ({
       name: null,
       profile: null,
       filter: null,
-      hasFeedback: false,
       isAuthenticated: false,
     });
   },
