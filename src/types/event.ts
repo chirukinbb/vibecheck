@@ -45,11 +45,11 @@ export interface Event extends EventBase {
     /** Профиль автора */
     author: EventAuthor;
     /** Теги (если есть) */
-    tags: Tag[];
+    tags: string[];
     /** Состоялось ли событие */
     is_happened?: number | null;
-    member: number | null;
-    members: Member[];
+    member?: number;
+    members?: Member[];
 }
 
 export interface Member {
@@ -69,7 +69,7 @@ export interface CreateEventDTO {
     description: string;
     /** Альтернатива thumbnail — путь к файлу */
     thumb_path: string;
-    address: string;
+    address: [number, number];
     category_id: number;
     slots: number;
     /** Дата в формате d/m/Y H:i */

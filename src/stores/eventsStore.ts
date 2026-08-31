@@ -13,6 +13,48 @@ import {
   updateEvent,
 } from '../api/events';
 import type {CreateEventDTO, Event, EventListItem, MemberFeedbackDTO, PaginationMeta, UpdateEventDTO} from '../types';
+import {fileToFormData} from "@/constants/mock-data";
+import {ReactNativeFile} from "@/types/file";
+
+export interface PayloadForValidation {
+  title: string;
+  description: string;
+  category_id: number;
+  address: [number, number];
+  slots: number;
+  planing_time: string;
+  thumbnail: ReactNativeFile;
+  tags?: string[];
+}
+
+/**
+ * Преобразует данные события из фронтенд-формата в payload для валидатора Laravel
+ */
+export function formatEventPayload(dto: Partial<CreateEventDTO> & Record<string, any>): PayloadForValidation {
+  const {
+    title = '',
+    description = '',
+    category_id,
+    address,
+    slots,
+    planing_time,
+    thumb_path,
+    tags,
+  } = dto;
+
+  return {
+    title,
+    description,
+    category_id: Number(category_id),
+    address: Array.isArray(address) ? address : [0, 0],
+    slots: Number(slots) || 0,
+    planing_time: planing_time !== null && planing_time !== undefined
+        ? String(planing_time)
+        : '',
+    thumbnail: fileToFormData(thumb_path),
+    tags,
+  }; // <-- Закрывающая скобка была пропущена
+}
 
 interface EventsState {
   // ─── Список ───
@@ -65,7 +107,6 @@ export const useEventsStore = create<EventsState>((set, get) => ({
     set({isLoadingList: true, error: null});
     try {
       const res = await getEvents({page});
-      console.log('Fetched events:', res);
       set({events: res.data, meta: res.meta});
     } catch (e: any) {
       set({error: e?.message ?? 'Ошибка загрузки событий'});
@@ -78,7 +119,6 @@ export const useEventsStore = create<EventsState>((set, get) => ({
     set({isLoadingList: true, error: null});
     try {
       const res = await getOrganizingEvents({page});
-      console.log('Fetched events:', res);
       set({events: res.data, meta: res.meta});
     } catch (e: any) {
       set({error: e?.message ?? 'Ошибка загрузки событий'});
@@ -91,7 +131,6 @@ export const useEventsStore = create<EventsState>((set, get) => ({
     set({isLoadingList: true, error: null});
     try {
       const res = await getAttendingEvents({page});
-      console.log('Fetched events:', res);
       set({events: res.data, meta: res.meta});
     } catch (e: any) {
       set({error: e?.message ?? 'Ошибка загрузки событий'});
@@ -145,9 +184,12 @@ export const useEventsStore = create<EventsState>((set, get) => ({
   addEvent: async (dto) => {
     set({isMutating: true, error: null});
     try {
+      console.log('add 0')
       const res = await createEvent(dto);
+      console.log('add 1')
+
       await get().refreshEvents();
-      return res.message;
+      return res?.message ?? 'Событие успешно создано'; // Добавлен возврат ответа
     } catch (e: any) {
       const msg = e?.message ?? 'Ошибка создания события';
       set({error: msg});
@@ -161,7 +203,6 @@ export const useEventsStore = create<EventsState>((set, get) => ({
     set({isMutating: true, error: null});
     try {
       const res = await updateEvent(id, dto);
-      // Обновить в списке и в selected
       const updated = await getEvent(id);
       set((s) => ({
         events: s.events.map((ev) => (ev.id === id ? updated.data : ev)),
@@ -200,14 +241,15 @@ export const useEventsStore = create<EventsState>((set, get) => ({
   subscribe: async (eventId) => {
     set({isMutating: true, error: null});
     try {
-      const res = await subscribeToEvent(eventId);
-      // Обновить reserved локально
+      const updatedEvent = await subscribeToEvent(eventId);
+
       set((s) => ({
         events: s.events.map((ev) =>
-            ev.id === eventId ? {...ev, reserved: (ev.reserved ?? 0) + 1} : ev,
+            ev.id === eventId ? updatedEvent : ev
         ),
+        selectedEvent: s.selectedEvent?.id === eventId ? updatedEvent : s.selectedEvent, // Исправлен ключик selectedEvent
       }));
-      return res.message;
+      return 'Подписка оформлена';
     } catch (e: any) {
       const msg = e?.message ?? 'Ошибка записи';
       set({error: msg});
@@ -223,7 +265,7 @@ export const useEventsStore = create<EventsState>((set, get) => ({
       const res = await unsubscribeFromEvent(eventId, memberId);
       set((s) => ({
         events: s.events.map((ev) =>
-            ev.id === eventId ? {...ev, reserved: Math.max(0, (ev.reserved ?? 0) - 1)} : ev,
+            ev.id === eventId ? {...ev, reserved: Math.max(0, (ev.reserved ?? 0) - 1)} : ev
         ),
       }));
       return res.message;

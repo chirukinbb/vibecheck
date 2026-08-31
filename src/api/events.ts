@@ -10,6 +10,7 @@ import type {
     UpdateEventDTO,
 } from '../types';
 import {apiClient} from './client';
+import {fileToFormData} from "@/constants/mock-data";
 
 // ─── Список событий ──────────────────────────────────────────────────
 
@@ -42,34 +43,30 @@ export function getEvent(id: number): Promise<ApiResponse<Event>> {
     return apiClient.get<ApiResponse<Event>>(`/event/${id}`).then((r) => r.data);
 }
 
-// ─── Создание / обновление / удаление ────────────────────────────────
-
-/** POST /api/v1/events — создать событие (multipart/form-data) */
-export function createEvent(dto: CreateEventDTO): Promise<SuccessResponse> {
+function eventFormData(dto: CreateEventDTO): FormData {
     const fd = new FormData();
     fd.append('title', dto.title);
     fd.append('description', dto.description);
 
-    const filename = dto.thumb_path.split('/').pop() || 'avatar.jpg';
-    const match = /\.(\w+)$/.exec(filename);
-    const type = match ? `image/${match[1] === 'jpg' ? 'jpeg' : match[1]}` : 'image/jpeg';
+    if (dto.thumb_path && !dto.thumb_path.startsWith('https://')) {
+        fd.append('thumbnail', fileToFormData(dto.thumb_path));
+    } else fd.append('thumbnail_url', dto.thumb_path)
 
-    // 3. Формируем объект файла для DTO
-    const thumbnail = {
-        uri: dto.thumb_path,             // Локальный путь пути file://...
-        name: filename,        // Имя файла (например, avatar.jpg или avatar.webp)
-        type: type,            // MIME-тип (например, image/webp или image/jpeg)
-    };
-
-    fd.append('thumbnail', thumbnail);
-    fd.append('address', dto.address);
+    dto.address?.forEach((tag) => fd.append('address[]', tag));
     fd.append('category_id', String(dto.category_id));
     fd.append('slots', String(dto.slots));
     fd.append('planing_time', dto.planing_time);
     dto.tags?.forEach((tag) => fd.append('tags[]', tag));
 
+    return fd;
+}
+
+// ─── Создание / обновление / удаление ────────────────────────────────
+
+/** POST /api/v1/events — создать событие (multipart/form-data) */
+export function createEvent(dto: CreateEventDTO): Promise<SuccessResponse> {
     return apiClient
-        .post<SuccessResponse>('/events', fd, {
+        .post<SuccessResponse>('/events', eventFormData(dto), {
             headers: {'Content-Type': 'multipart/form-data'},
         })
         .then((r) => r.data);
@@ -77,7 +74,7 @@ export function createEvent(dto: CreateEventDTO): Promise<SuccessResponse> {
 
 /** PUT /api/v1/event/{id} — обновить событие */
 export function updateEvent(id: number, dto: UpdateEventDTO): Promise<SuccessResponse> {
-    return apiClient.put<SuccessResponse>(`/event/${id}`, dto).then((r) => r.data);
+    return apiClient.put<SuccessResponse>(`/event/${id}`, eventFormData(dto)).then((r) => r.data);
 }
 
 /** DELETE /api/v1/event/{id} — удалить событие */

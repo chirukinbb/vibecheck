@@ -7,7 +7,7 @@ import {Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View} fro
 import {Button, Chip, Modal, Portal, Searchbar, Surface, TextInput, useTheme} from 'react-native-paper';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
-import AddressPicker from '@/components/address-picker';
+import AddressPicker, {Coordinates} from '@/components/address-picker';
 import ImagePickerWithCrop from '@/components/image-picker';
 import PageLayout from '@/components/page-layout';
 import SingleSelect from '@/components/single-select';
@@ -25,14 +25,12 @@ export default function CreateEventScreen() {
     void fetchCategories();
   }, [fetchCategories]);
 
-  // GET /events возвращает события в сокращённом виде (без тегов),
-  // поэтому подсказки тегов не извлекаются из списка. Пользователь вводит теги вручную.
   const SUGGESTED_TAGS: string[] = [];
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState<number | null>(null);
-  const [address, setAddress] = useState('');
+  const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
   const [planingTime, setPlaningTime] = useState<Date | null>(null);
   const [slots, setSlots] = useState('');
@@ -47,15 +45,16 @@ export default function CreateEventScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!title || !categoryId || !address || !slots || !planingTime) {
+    if (!title || !categoryId || !coordinates || !slots || !planingTime) {
       return;
     }
+    console.log('Submitting event:', {title, categoryId, coordinates, slots, planingTime})
 
     const saved = await addEvent({
       title,
       description,
       category_id: categoryId,
-      address,
+      address: coordinates,
       planing_time: planingTime ? Math.floor(planingTime.getTime() / 1000) : null,
       slots: Number(slots),
       tags,
@@ -78,19 +77,8 @@ export default function CreateEventScreen() {
       const position = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
-      const [addr] = await Location.reverseGeocodeAsync({
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-      });
-      const parts = [
-        addr.street,
-        addr.streetNumber,
-        addr.district,
-        addr.city,
-        addr.region,
-        addr.country,
-      ].filter(Boolean);
-      setAddress(parts.join(', ') || String(position.coords.latitude) + ', ' + String(position.coords.longitude));
+
+      setCoordinates([position.coords.latitude, position.coords.longitude]);
     } catch (e) {
       alert('Не удалось определить местоположение');
     } finally {
@@ -102,7 +90,7 @@ export default function CreateEventScreen() {
 
   return (
       <PageLayout title="Новое событие">
-        <View style={styles.screen}>
+        <View style={[styles.screen, {backgroundColor: theme.colors.background}]}>
           <KeyboardAvoidingView
               behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
               style={styles.flex}
@@ -115,8 +103,16 @@ export default function CreateEventScreen() {
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
             >
-
-              <Surface elevation={2} style={styles.form}>
+              <Surface
+                  elevation={2}
+                  style={[
+                    styles.form,
+                    {
+                      backgroundColor: theme.colors.elevation.level2,
+                      borderColor: theme.colors.outlineVariant,
+                    },
+                  ]}
+              >
                 {/* Название */}
                 <TextInput
                     mode="outlined"
@@ -126,192 +122,194 @@ export default function CreateEventScreen() {
                     placeholder="Например: Йога на крыше"
                 />
 
-              {/* Описание */}
-              <TextInput
-                  mode="outlined"
-                  label="Описание"
-                  value={description}
-                  onChangeText={setDescription}
-                  multiline
-                  numberOfLines={4}
-                  placeholder="Расскажите подробнее о событии..."
-              />
-
-              {/* Категория */}
-              <SingleSelect<number>
-                  label="Категория"
-                  options={categories.map((cat) => ({code: cat.id, label: cat.title}))}
-                  selected={categoryId}
-                  onChange={(v) => setCategoryId(v as number | null)}
-              />
-
-              {/* Адрес */}
-              <AddressPicker
-                  label="Адрес"
-                  placeholder="ул. Тверская, 15"
-                  value={address}
-                  onChangeText={setAddress}
-                  onUseCurrentLocation={handleUseCurrentLocation}
-                  locationLoading={locationLoading}
-              />
-
-              {/* Дата */}
-              <DateTimePicker
-                  label="Дата и время"
-                  value={planingTime}
-                  onChange={(d) => setPlaningTime(d)}
-              />
-
-              {/* Места */}
-              <TextInput
-                  mode="outlined"
-                  label="Количество мест"
-                  value={slots}
-                  onChangeText={setSlots}
-                  keyboardType="numeric"
-                  placeholder="20"
-              />
-
-              {/* Теги */}
-              <View style={styles.tagField}>
-                <Button
+                {/* Описание */}
+                <TextInput
                     mode="outlined"
-                    onPress={() => {
-                      setTagQuery('');
-                      setTagModalVisible(true);
-                    }}
-                    style={styles.tagSelectorButton}
-                >
-                  {tags.length > 0 ? `Теги (${tags.length})` : 'Выбрать теги'}
-                </Button>
+                    label="Описание"
+                    value={description}
+                    onChangeText={setDescription}
+                    multiline
+                    numberOfLines={4}
+                    placeholder="Расскажите подробнее о событии..."
+                />
 
-                <View style={styles.chipRow}>
-                  {tags.map((tag) => (
-                      <Chip
-                          key={tag}
-                          onPress={() => setTags(tags.filter((t) => t !== tag))}
-                          style={styles.chip}
-                          compact
-                      >
-                        #{tag}
-                      </Chip>
-                  ))}
-                </View>
+                {/* Категория */}
+                <SingleSelect<number>
+                    label="Категория"
+                    options={categories.map((cat) => ({code: cat.id, label: cat.title}))}
+                    selected={categoryId}
+                    onChange={(v) => setCategoryId(v as number | null)}
+                />
 
-                <Portal>
-                  <Modal
-                      visible={tagModalVisible}
-                      onDismiss={() => setTagModalVisible(false)}
-                      contentContainerStyle={[
-                        styles.modal,
-                        {backgroundColor: theme.colors.surface},
-                      ]}
+                {/* Адрес */}
+                <AddressPicker
+                    label="Адрес"
+                    placeholder="Выберите адрес на карте"
+                    value={coordinates}
+                    onChangeCoordinates={(coords) => setCoordinates(coords)}
+                    onUseCurrentLocation={handleUseCurrentLocation}
+                    locationLoading={locationLoading}
+                />
+
+                {/* Дата */}
+                <DateTimePicker
+                    label="Дата и время"
+                    value={planingTime}
+                    onChange={(d) => setPlaningTime(d)}
+                />
+
+                {/* Места */}
+                <TextInput
+                    mode="outlined"
+                    label="Количество мест"
+                    value={slots}
+                    onChangeText={setSlots}
+                    keyboardType="numeric"
+                    placeholder="20"
+                />
+
+                {/* Теги */}
+                <View style={styles.tagField}>
+                  <Button
+                      mode="outlined"
+                      onPress={() => {
+                        setTagQuery('');
+                        setTagModalVisible(true);
+                      }}
+                      style={styles.tagSelectorButton}
                   >
-                    <Searchbar
-                        placeholder="Поиск тегов..."
-                        value={tagQuery}
-                        onChangeText={setTagQuery}
-                        style={styles.searchbar}
-                        autoFocus
-                    />
+                    {tags.length > 0 ? `Теги (${tags.length})` : 'Выбрать теги'}
+                  </Button>
 
-                    <View style={styles.tagInputRow}>
-                      <TextInput
-                          mode="outlined"
-                          label="Новый тег"
-                          value={tagInput}
-                          onChangeText={setTagInput}
-                          placeholder="йога"
-                          style={styles.tagTextInput}
+                  <View style={styles.chipRow}>
+                    {tags.map((tag) => (
+                        <Chip
+                            key={tag}
+                            onPress={() => setTags(tags.filter((t) => t !== tag))}
+                            style={styles.chip}
+                            compact
+                        >
+                          #{tag}
+                        </Chip>
+                    ))}
+                  </View>
+
+                  <Portal>
+                    <Modal
+                        visible={tagModalVisible}
+                        onDismiss={() => setTagModalVisible(false)}
+                        contentContainerStyle={[
+                          styles.modal,
+                          {backgroundColor: theme.colors.elevation.level3},
+                        ]}
+                    >
+                      <Searchbar
+                          placeholder="Поиск тегов..."
+                          value={tagQuery}
+                          onChangeText={setTagQuery}
+                          style={styles.searchbar}
+                          autoFocus
                       />
+
+                      <View style={styles.tagInputRow}>
+                        <TextInput
+                            mode="outlined"
+                            label="Новый тег"
+                            value={tagInput}
+                            onChangeText={setTagInput}
+                            placeholder="йога"
+                            style={styles.tagTextInput}
+                        />
+                        <Button
+                            mode="contained"
+                            onPress={() => {
+                              const nextTag = tagInput.trim();
+                              if (!nextTag) return;
+                              if (!tags.includes(nextTag)) {
+                                setTags([...tags, nextTag]);
+                              }
+                              setTagInput('');
+                            }}
+                            style={styles.addTagButton}
+                        >
+                          Добавить
+                        </Button>
+                      </View>
+
+                      <ScrollView style={styles.list} nestedScrollEnabled>
+                        {SUGGESTED_TAGS.filter((tag) =>
+                            tag.toLowerCase().includes(tagQuery.toLowerCase()),
+                        ).map((tag) => {
+                          const selected = tags.includes(tag);
+                          return (
+                              <Chip
+                                  key={tag}
+                                  mode={selected ? 'flat' : 'outlined'}
+                                  selected={selected}
+                                  onPress={() => {
+                                    if (selected) {
+                                      setTags(tags.filter((t) => t !== tag));
+                                    } else {
+                                      setTags([...tags, nextTag]);
+                                    }
+                                  }}
+                                  style={styles.modalChip}
+                                  compact
+                              >
+                                #{tag}
+                              </Chip>
+                          );
+                        })}
+                      </ScrollView>
+
                       <Button
                           mode="contained"
-                          onPress={() => {
-                            const nextTag = tagInput.trim();
-                            if (!nextTag) return;
-                            if (!tags.includes(nextTag)) {
-                              setTags([...tags, nextTag]);
-                            }
-                            setTagInput('');
-                          }}
-                          style={styles.addTagButton}
+                          onPress={() => setTagModalVisible(false)}
+                          style={styles.doneButton}
                       >
-                        Добавить
+                        Готово
                       </Button>
-                    </View>
+                    </Modal>
+                  </Portal>
+                </View>
 
-                    <ScrollView style={styles.list} nestedScrollEnabled>
-                      {SUGGESTED_TAGS.filter((tag) =>
-                          tag.toLowerCase().includes(tagQuery.toLowerCase()),
-                      ).map((tag) => {
-                        const selected = tags.includes(tag);
-                        return (
-                            <Chip
-                                key={tag}
-                                mode={selected ? 'flat' : 'outlined'}
-                                selected={selected}
-                                onPress={() => {
-                                  if (selected) {
-                                    setTags(tags.filter((t) => t !== tag));
-                                  } else {
-                                    setTags([...tags, tag]);
-                                  }
-                                }}
-                                style={styles.modalChip}
-                                compact
-                            >
-                              #{tag}
-                            </Chip>
-                        );
-                      })}
-                    </ScrollView>
-
-                    <Button
-                        mode="contained"
-                        onPress={() => setTagModalVisible(false)}
-                        style={styles.doneButton}
-                    >
-                      Готово
-                    </Button>
-                  </Modal>
-                </Portal>
-              </View>
-
-              {/* Обложка */}
-              <View style={styles.coverRow}>
-                {thumbnail ? (
-                    <View style={styles.coverPreview}
+                {/* Обложка */}
+                <View style={styles.coverRow}>
+                  {thumbnail ? (
+                      <View
+                          style={[styles.coverPreview, {backgroundColor: theme.colors.surfaceVariant}]}
                           accessible
                           accessibilityLabel="Обложка события"
-                          accessibilityHint="Нажмите, чтобы выбрать другую обложку">
-                      <Image source={{uri: thumbnail}} style={styles.coverImage}/>
-                      <Button mode="text" onPress={() => setThumbnail(null)}>
-                        ✕
-                      </Button>
-                    </View>
-                ) : (
-                    <ImagePickerWithCrop
-                        aspect={[16, 9]}
-                        onImageSelected={handleThumbnailSelected}
-                        title="Выберите обложку"
-                        maxWidth={1600}
-                        quality={0.8}
-                    >
-                      {({open}) => (
-                          <Button mode="outlined" onPress={open}>
-                            Выбрать обложку
-                          </Button>
-                      )}
-                    </ImagePickerWithCrop>
-                )}
-              </View>
+                          accessibilityHint="Нажмите, чтобы выбрать другую обложку"
+                      >
+                        <Image source={{uri: thumbnail}} style={styles.coverImage}/>
+                        <Button mode="text" onPress={() => setThumbnail(null)}>
+                          ✕
+                        </Button>
+                      </View>
+                  ) : (
+                      <ImagePickerWithCrop
+                          aspect={[16, 9]}
+                          onImageSelected={handleThumbnailSelected}
+                          title="Выберите обложку"
+                          maxWidth={1600}
+                          quality={0.8}
+                      >
+                        {({open}) => (
+                            <Button mode="outlined" onPress={open}>
+                              Выбрать обложку
+                            </Button>
+                        )}
+                      </ImagePickerWithCrop>
+                  )}
+                </View>
 
                 {/* Сабмит */}
                 <Button
                     mode="contained"
                     onPress={handleSubmit}
                     loading={isMutating}
-                    disabled={isMutating || !title || !categoryId || !address || !slots || !planingTime}
+                    disabled={isMutating || !title || !categoryId || !coordinates || !slots || !planingTime}
                     style={styles.submitBtn}
                 >
                   Создать событие
@@ -328,7 +326,6 @@ const styles = StyleSheet.create({
   flex: {flex: 1},
   screen: {
     flex: 1,
-    backgroundColor: '#FAFBFF',
   },
   content: {
     maxWidth: MaxContentWidth,
@@ -340,9 +337,7 @@ const styles = StyleSheet.create({
     borderRadius: Spacing.three,
     padding: Spacing.three,
     gap: Spacing.three,
-    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E6E9F2',
   },
   tagField: {gap: Spacing.two},
   tagInputRow: {
@@ -377,7 +372,6 @@ const styles = StyleSheet.create({
     width: '100%',
     borderRadius: Spacing.three,
     overflow: 'hidden',
-    backgroundColor: '#000',
   },
   coverImage: {
     width: '100%',

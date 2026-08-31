@@ -31,13 +31,11 @@ export default function LoginScreen() {
 
     try {
       if (mode === 'login') {
-        // Вход возвращает только токен → переходим на bootstrap для загрузки /me
         const {token} = await loginWithEmail({email: email.trim(), password});
-        console.log(token)
+        console.log(token);
         setFeedback({type: 'success', text: 'Вы успешно вошли в аккаунт'});
         router.replace(`/bootstrap/${token}`);
       } else {
-        // Регистрация НЕ возвращает токен — пароль придёт на email
         const res = await registerWithEmail({name: name.trim(), email: email.trim()});
         setFeedback({
           type: 'success',
@@ -60,7 +58,6 @@ export default function LoginScreen() {
 
       setFeedback({type: 'error', text: serverMessage});
 
-      // Safe stringify to avoid circular refs
       const safeStringify = (obj: any, space = 2) => {
         try {
           const seen = new WeakSet();
@@ -142,14 +139,23 @@ export default function LoginScreen() {
   };
 
   return (
-      <Surface style={[styles.root, styles.screen]} mode="flat">
+      <Surface style={[styles.root, {backgroundColor: theme.colors.background}]} mode="flat">
         <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={[styles.keyboard, {paddingTop: insets.top + Spacing.five}]}
         >
           <View style={styles.content}>
-            <Surface elevation={2} style={styles.authCard}>
-              <Text variant="headlineMedium" style={styles.title}>
+            <Surface
+                elevation={2}
+                style={[
+                  styles.authCard,
+                  {
+                    backgroundColor: theme.colors.elevation.level2,
+                    borderColor: theme.colors.outlineVariant,
+                  },
+                ]}
+            >
+              <Text variant="headlineMedium" style={[styles.title, {color: theme.colors.onSurface}]}>
                 Events
               </Text>
               <Text
@@ -200,11 +206,19 @@ export default function LoginScreen() {
 
                 {feedback && (
                     <Text
-                        style={
-                          feedback.type === 'success'
-                              ? styles.feedbackSuccess
-                              : styles.feedbackError
-                        }
+                        style={[
+                          feedback.type === 'success' ? styles.feedbackSuccess : styles.feedbackError,
+                          {
+                            backgroundColor:
+                                feedback.type === 'success'
+                                    ? theme.colors.primaryContainer
+                                    : theme.colors.errorContainer,
+                            color:
+                                feedback.type === 'success'
+                                    ? theme.colors.onPrimaryContainer
+                                    : theme.colors.onErrorContainer,
+                          },
+                        ]}
                     >
                       {feedback.text}
                     </Text>
@@ -232,14 +246,13 @@ export default function LoginScreen() {
 
             <View style={styles.oauthSection}>
               <Button
-                  mode="contained"
-                  buttonColor="#FFFFFF"
-                  textColor="#1F2937"
+                  mode="outlined"
                   onPress={handleGoogleLogin}
-                  style={styles.googleButton}
+                  style={[styles.googleButton, {borderColor: theme.colors.outline}]}
                   labelStyle={styles.googleButtonLabel}
+                  textColor={theme.colors.onSurface}
                   icon={() => (
-                      <View style={styles.googleBadge}>
+                      <View style={[styles.googleBadge, {backgroundColor: theme.colors.surfaceVariant}]}>
                         <Text style={styles.googleBadgeText}>G</Text>
                       </View>
                   )}
@@ -254,9 +267,6 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    backgroundColor: '#FAFBFF',
-  },
   root: {flex: 1},
   keyboard: {flex: 1},
   content: {
@@ -274,16 +284,12 @@ const styles = StyleSheet.create({
     borderRadius: Spacing.three,
     padding: Spacing.four,
     gap: Spacing.three,
-    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E6E9F2',
   },
   title: {fontWeight: '700'},
   segmented: {width: '100%'},
   form: {width: '100%', gap: Spacing.three},
   feedbackSuccess: {
-    color: '#15803d',
-    backgroundColor: '#dcfce7',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -291,8 +297,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   feedbackError: {
-    color: '#b91c1c',
-    backgroundColor: '#fee2e2',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -315,14 +319,6 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 280,
     borderRadius: 18,
-    elevation: 0,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000000',
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    shadowOffset: {width: 0, height: 4},
   },
   googleButtonLabel: {
     fontWeight: '600',
@@ -334,7 +330,6 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F3F4F6',
   },
   googleBadgeText: {
     color: '#EA4335',

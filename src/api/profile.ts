@@ -1,6 +1,7 @@
 // src/api/profile.ts — профиль пользователя
 import {apiClient} from './client';
 import type {ProfileUpdateDTO, SuccessResponse} from '../types';
+import {fileToFormData} from "@/constants/mock-data";
 
 // Хелпер для создания объекта FormData из вашей DTO
 export const createProfileFormData = (data: ProfileUpdateDTO): FormData => {
@@ -17,17 +18,7 @@ export const createProfileFormData = (data: ProfileUpdateDTO): FormData => {
 
   // Если был передан аватар-файл (объект с uri):
   if (data.avatar_url && !data.avatar_url.startsWith('https://')) {
-    // 2. Получаем расширение файла из URI
-    const filename = data.avatar_url.split('/').pop() || 'avatar.jpg';
-    const match = /\.(\w+)$/.exec(filename);
-    const type = match ? `image/${match[1] === 'jpg' ? 'jpeg' : match[1]}` : 'image/jpeg';
-
-    // 3. Формируем объект файла для DTO
-    const avatarFile = {
-      uri: data.avatar_url,             // Локальный путь пути file://...
-      name: filename,        // Имя файла (например, avatar.jpg или avatar.webp)
-      type: type,            // MIME-тип (например, image/webp или image/jpeg)
-    };
+    const avatarFile = fileToFormData(data.avatar_url)
     formData.append('avatar', avatarFile as any);
   } else if (data.avatar_url !== undefined) {
     // Если передаем ссылку или null

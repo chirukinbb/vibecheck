@@ -5,6 +5,7 @@ import type {Category} from '@/types/category';
 import type {Event} from '@/types/event';
 import type {GeoFilter} from '@/types/filter';
 import type {Profile} from '@/types/profile';
+import {ReactNativeFile} from "@/types/file";
 
 // ─── Категории ────────────────────────────────────────────────────────
 
@@ -251,4 +252,19 @@ export function getCategoryById(id: number): Category | undefined {
 
 export function getEventById(id: number): Event | undefined {
   return MOCK_EVENTS.find((e) => e.id === id);
+}
+
+export function fileToFormData(filepath: string): ReactNativeFile {
+  const filename = filepath.split('/').pop()
+  if (filename != null) {
+    const match = /\.(\w+)$/.exec(filename);
+    const type = match ? `image/${match[1] === 'jpg' ? 'jpeg' : match[1]}` : 'image/jpeg';
+
+    // 3. Формируем объект файла для DTO
+    return {
+      uri: filepath,             // Локальный путь пути file://...
+      name: filename,        // Имя файла (например, avatar.jpg или avatar.webp)
+      type: type,            // MIME-тип (например, image/webp или image/jpeg)
+    };
+  }
 }

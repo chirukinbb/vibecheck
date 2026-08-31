@@ -45,8 +45,6 @@ export default function ProfileScreen() {
   const [bio, setBio] = useState(profile?.bio ?? '');
   const [avatarUri, setAvatarUri] = useState<string | null>(profile?.avatar_url ?? null);
 
-  // ─── Модал выбора источника ────────────────────────────
-
   // ─── Фильтр ──────────────────────────────────────────────────
   const [filterAddress, setFilterAddress] = useState(filter?.center ?? [55.7519, 37.6173] as [number, number]);
   const [radius, setRadius] = useState(String(filter?.radius ?? 10));
@@ -98,18 +96,6 @@ export default function ProfileScreen() {
       const position = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
-      const [address] = await Location.reverseGeocodeAsync({
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-      });
-      const parts = [
-        address.street,
-        address.streetNumber,
-        address.district,
-        address.city,
-        address.region,
-        address.country,
-      ].filter(Boolean);
       setFilterAddress([Number(position.coords.latitude), Number(position.coords.longitude)] as [number, number]);
     } catch (e) {
       alert('Не удалось определить местоположение');
@@ -122,7 +108,6 @@ export default function ProfileScreen() {
     router.replace('/(auth)/login');
   };
 
-  // ─── Аватар ────────────────────────────────────────────
   const handleAvatarSelected = async (uri: string) => {
     setAvatarUri(uri);
   };
@@ -131,7 +116,7 @@ export default function ProfileScreen() {
 
   return (
       <PageLayout title="Профиль">
-        <View style={styles.screen}>
+        <View style={[styles.screen, {backgroundColor: theme.colors.background}]}>
           <KeyboardAvoidingView
               behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
               style={styles.flex}
@@ -145,7 +130,13 @@ export default function ProfileScreen() {
                 keyboardShouldPersistTaps="handled"
             >
 
-              <Surface elevation={2} style={styles.profileCard}>
+              <Surface
+                  elevation={2}
+                  style={[
+                    styles.profileCard,
+                    {backgroundColor: theme.colors.elevation.level2}
+                  ]}
+              >
                 <ImagePickerWithCrop
                     aspect={[1, 1]}
                     onImageSelected={handleAvatarSelected}
@@ -159,81 +150,90 @@ export default function ProfileScreen() {
                             <Avatar.Image
                                 size={80}
                                 source={{uri: avatarUri}}
-                                style={styles.authorAvatar}
+                                style={[styles.authorAvatar, {backgroundColor: theme.colors.primaryContainer}]}
                             />
                         ) : (
                             <Avatar.Text
                                 size={80}
                                 label={name.charAt(0).toUpperCase()}
-                                style={styles.authorAvatar}
-                                labelStyle={styles.avatarLabel}
+                                style={[styles.authorAvatar, {backgroundColor: theme.colors.primaryContainer}]}
+                                labelStyle={[styles.avatarLabel, {color: theme.colors.onPrimaryContainer}]}
                             />
                         )}
                       </Pressable>
                   )}
                 </ImagePickerWithCrop>
                 <View style={styles.profileInfo}>
-                  <Text variant="titleMedium" style={styles.profileName}>
+                  <Text variant="titleMedium" style={[styles.profileName, {color: theme.colors.onSurface}]}>
                     {name}
                   </Text>
-                  <Text variant="bodyMedium" style={styles.profileSubtitle} numberOfLines={2}>
+                  <Text variant="bodyMedium" style={{color: theme.colors.onSurfaceVariant}} numberOfLines={2}>
                     {bio || 'Расскажите о себе...'}
                   </Text>
                 </View>
               </Surface>
 
               {/* Единая карточка с табами */}
-              <Surface elevation={2} style={styles.section}>
+              <Surface
+                  elevation={2}
+                  style={[
+                    styles.section,
+                    {
+                      backgroundColor: theme.colors.elevation.level2,
+                      borderColor: theme.colors.outlineVariant,
+                    }
+                  ]}
+              >
                 <SegmentedButtons
                     value={activeTab}
                     onValueChange={(v) => setActiveTab(v as 'profile' | 'filter' | 'settings')}
                     style={styles.segmented}
                     buttons={[
-                      {value: 'profile', label: 'Личная информация'},
+                      {value: 'profile', label: 'Профиль'},
                       {value: 'filter', label: 'Фильтр'},
                       {value: 'settings', label: 'Настройки'},
                     ]}
                 />
 
-              {activeTab === 'profile' && (
-                  <View style={styles.tabContent}>
-                    <TextInput
-                        mode="outlined"
-                        label="Имя"
-                        value={name}
-                        onChangeText={setName}
-                    />
+                {activeTab === 'profile' && (
+                    <View style={styles.tabContent}>
+                      <TextInput
+                          mode="outlined"
+                          label="Имя"
+                          value={name}
+                          onChangeText={setName}
+                      />
 
-                    <MultiSelect
-                        label="Языки"
-                        options={AVAILABLE_LANGUAGES}
-                        selected={languages}
-                        onChange={setLanguages}
-                    />
+                      <MultiSelect
+                          label="Языки"
+                          options={AVAILABLE_LANGUAGES}
+                          selected={languages}
+                          onChange={setLanguages}
+                      />
 
-                    <TextInput
-                        mode="outlined"
-                        label="О себе"
-                        value={bio}
-                        onChangeText={setBio}
-                        multiline
-                        numberOfLines={3}
-                        placeholder="Расскажите о себе..."
-                    />
+                      <TextInput
+                          mode="outlined"
+                          label="О себе"
+                          value={bio}
+                          onChangeText={setBio}
+                          multiline
+                          numberOfLines={3}
+                          placeholder="Расскажите о себе..."
+                      />
 
-                    <Button
-                        mode="contained"
-                        onPress={handleSaveProfile}
-                        loading={isProfileUpdating}
-                        disabled={isProfileUpdating}
-                    >
-                      Сохранить профиль
-                    </Button>
-                  </View>
-              )}
+                      <Button
+                          mode="contained"
+                          onPress={handleSaveProfile}
+                          loading={isProfileUpdating}
+                          disabled={isProfileUpdating}
+                      >
+                        Сохранить профиль
+                      </Button>
+                    </View>
+                )}
 
-              {activeTab === 'filter' && (
-                  <View style={styles.tabContent}>
+                {activeTab === 'filter' && (
+                    <View style={styles.tabContent}>
                       <AddressPicker
                           label="Адрес"
                           placeholder="Москва"
@@ -243,61 +243,60 @@ export default function ProfileScreen() {
                           locationLoading={locationLoading}
                       />
 
-                    <TextInput
-                        mode="outlined"
-                        label="Радиус (км)"
-                        value={radius}
-                        onChangeText={setRadius}
-                        keyboardType="numeric"
-                        placeholder="10"
-                    />
+                      <TextInput
+                          mode="outlined"
+                          label="Радиус (км)"
+                          value={radius}
+                          onChangeText={setRadius}
+                          keyboardType="numeric"
+                          placeholder="10"
+                      />
 
-                    {/* Категории фильтра */}
-                    <MultiSelect
-                        label="Категории"
-                        options={categories.map((cat) => ({
-                          code: cat.id,
-                          label: cat.title,
-                        }))}
-                        selected={selectedCategories}
-                        onChange={setSelectedCategories}
-                    />
+                      <MultiSelect
+                          label="Категории"
+                          options={categories.map((cat) => ({
+                            code: cat.id,
+                            label: cat.title,
+                          }))}
+                          selected={selectedCategories}
+                          onChange={setSelectedCategories}
+                      />
 
-                    <Button
-                        mode="contained"
-                        onPress={handleSaveFilter}
-                        loading={isFilterUpdating}
-                        disabled={isFilterUpdating}
-                    >
-                      Сохранить фильтр
-                    </Button>
-                  </View>
-              )}
+                      <Button
+                          mode="contained"
+                          onPress={handleSaveFilter}
+                          loading={isFilterUpdating}
+                          disabled={isFilterUpdating}
+                      >
+                        Сохранить фильтр
+                      </Button>
+                    </View>
+                )}
 
-              {activeTab === 'settings' && (
-                  <View style={styles.tabContent}>
-                    <Text variant="labelLarge" style={styles.sectionTitle}>
-                      Тема приложения
-                    </Text>
-                    <SegmentedButtons
-                        value={themeMode}
-                        onValueChange={(v) => setThemeMode(v as 'light' | 'dark' | 'system')}
-                        style={styles.segmented}
-                        buttons={[
-                          {value: 'system', label: 'Система'},
-                          {value: 'light', label: 'Светлая'},
-                          {value: 'dark', label: 'Тёмная'},
-                        ]}
-                    />
-                  </View>
-              )}
-            </Surface>
+                {activeTab === 'settings' && (
+                    <View style={styles.tabContent}>
+                      <Text variant="labelLarge" style={[styles.sectionTitle, {color: theme.colors.onSurface}]}>
+                        Тема приложения
+                      </Text>
+                      <SegmentedButtons
+                          value={themeMode}
+                          onValueChange={(v) => setThemeMode(v as 'light' | 'dark' | 'system')}
+                          style={styles.segmented}
+                          buttons={[
+                            {value: 'system', label: 'Система'},
+                            {value: 'light', label: 'Светлая'},
+                            {value: 'dark', label: 'Тёмная'},
+                          ]}
+                      />
+                    </View>
+                )}
+              </Surface>
 
               <Button
                   mode="outlined"
                   textColor={theme.colors.error}
                   onPress={handleLogout}
-                  style={styles.logoutBtn}
+                  style={[styles.logoutBtn, {borderColor: theme.colors.error}]}
               >
                 Выйти
               </Button>
@@ -312,7 +311,6 @@ const styles = StyleSheet.create({
   flex: {flex: 1},
   screen: {
     flex: 1,
-    backgroundColor: '#FAFBFF',
   },
   content: {
     maxWidth: MaxContentWidth,
@@ -325,7 +323,6 @@ const styles = StyleSheet.create({
     padding: Spacing.four,
     gap: Spacing.three,
     marginBottom: Spacing.three,
-    backgroundColor: '#FFFFFF',
   },
   avatarRow: {
     alignItems: 'center',
@@ -335,27 +332,19 @@ const styles = StyleSheet.create({
   profileInfo: {
     gap: Spacing.one,
   },
-  authorAvatar: {
-    backgroundColor: '#E8EAF6',
-  },
+  authorAvatar: {},
   avatarLabel: {
-    color: '#1F2937',
     fontWeight: '700',
   },
   profileName: {
     fontWeight: '700',
-  },
-  profileSubtitle: {
-    color: '#6A6A6A',
   },
   section: {
     borderRadius: Spacing.three,
     padding: Spacing.three,
     gap: Spacing.three,
     marginBottom: Spacing.four,
-    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E6E9F2',
   },
   segmented: {marginBottom: Spacing.two},
   sectionTitle: {
@@ -365,12 +354,6 @@ const styles = StyleSheet.create({
   tabContent: {
     gap: Spacing.three,
   },
-  codeRow: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-  },
-  codeInput: {flex: 2},
-  isoInput: {flex: 1},
   logoutBtn: {
     marginTop: Spacing.two,
     width: '100%',

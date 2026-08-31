@@ -16,19 +16,27 @@ import {
     useTheme,
 } from 'react-native-paper';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import * as Location from 'expo-location';
 
 import PageLayout from '@/components/page-layout';
 import {formatDate} from '@/constants/mock-data';
 import {MaxContentWidth, Spacing} from '@/constants/theme';
 import {useEventsStore} from '@/stores';
-import {subscribeToEvent} from "@/api";
+import {subscribeToEvent, unsubscribeFromEvent} from "@/api";
 
-const TOMTOM_API_KEY = process.env.EXPO_PUBLIC_TOMTOM_API_KEY || process.env.TOMTOM_API_KEY || 'BHEiGUcbB06ofsGybuUFTFReGMYYkoy9';
+const TOMTOM_API_KEY = process.env.EXPO_PUBLIC_TOMTOM_API_KEY || process.env.TOMTOM_API_KEY;
 
 export default function EventDetailScreen() {
   const {id} = useLocalSearchParams<{ id: string }>();
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const {selectedEvent, isLoadingSingle, error, fetchEvent, clearSelected} = useEventsStore();
+
+  const [addressName, setAddressName] = useState<string>('Определение адреса…');
+  const [mapVisible, setMapVisible] = useState(false);
+  const [mapUrl, setMapUrl] = useState<string | null>(null);
+  const [mapLoading, setMapLoading] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -37,35 +45,84 @@ export default function EventDetailScreen() {
   }, [clearSelected, fetchEvent, id]);
 
   const event = selectedEvent;
-  const insets = useSafeAreaInsets();
-  const address = event?.address ?? '';
-  const [mapVisible, setMapVisible] = useState(false);
-  const [mapUrl, setMapUrl] = useState<string | null>(null);
-  const [mapLoading, setMapLoading] = useState(false);
-  const [mapError, setMapError] = useState<string | null>(null);
 
-  const openMapModal = async () => {
+  // Извлекаем широту и долготу из полей объекта
+  const lat = event?.coordinate_lat ? parseFloat(event.coordinate_lat) : null;
+  const lng = event?.coordinate_lng ? parseFloat(event.coordinate_lng) : null;
+
+  // 1. Определение адреса: Сначала устройство (Expo Location), при ошибке/неудаче — TomTom Reverse Geocode API
+  useEffect(() => {
+    if (lat === null || lng === null || isNaN(lat) || isNaN(lng)) {
+      setAddressName('Адрес не указан');
+      return;
+    }
+
+    let isMounted = true;
+
+    const resolveAddress = async () => {
+      // ПОПЫТКА 1: Пробуем декодировать силами самого телефона через expo-location
+      try {
+        const geocoded = await Location.reverseGeocodeAsync({latitude: lat, longitude: lng});
+        if (geocoded && geocoded.length > 0) {
+          const item = geocoded[0];
+          const formatted = [item.city || item.region, item.street, item.name]
+              .filter(Boolean)
+              .join(', ');
+
+          if (formatted && isMounted) {
+            setAddressName(formatted);
+            return;
+          }
+        }
+      } catch (_err) {
+        // Телефон не сумел декодировать (например, нет разрешения, ошибки сервиса ОС и т.д.)
+        console.warn('Expo location reverse geocode failed, falling back to TomTom');
+      }
+
+      // ПОПЫТКА 2 (Фоллбэк): Если телефон не смог декодировать — запрашиваем TomTom API
+      try {
+        const response = await fetch(
+            `https://api.tomtom.com/search/2/reverseGeocode/${lat},${lng}.json?key=${TOMTOM_API_KEY}&language=ru-RU`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          const freeformAddress = data.addresses?.[0]?.address?.freeformAddress;
+          if (freeformAddress && isMounted) {
+            setAddressName(freeformAddress);
+            return;
+          }
+        }
+      } catch (_tomTomErr) {
+        console.warn('TomTom reverse geocode also failed');
+      }
+
+      // ПОПЫТКА 3: Если ни телефон, ни TomTom не вербализовали координаты — выводим сами числа
+      if (isMounted) {
+        setAddressName(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+      }
+    };
+
+    resolveAddress();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [lat, lng]);
+
+  // 2. Генерация ссылки на картинку статической карты TomTom
+  const openMapModal = () => {
     setMapVisible(true);
-    if (mapUrl || mapLoading || !address) return;
+    if (lat === null || lng === null || isNaN(lat) || isNaN(lng)) {
+      setMapError('Координаты события отсутствуют');
+      return;
+    }
+
     setMapLoading(true);
     setMapError(null);
 
     try {
-      const response = await fetch(
-          `https://api.tomtom.com/search/2/search/${encodeURIComponent(address)}.json?key=${TOMTOM_API_KEY}&language=ru-RU&limit=1`,
-      );
-      if (!response.ok) {
-        throw new Error('TomTom request failed');
-      }
-      const data = await response.json();
-      const position = data.results?.[0]?.position;
-      if (!position?.lat || !position?.lon) {
-        throw new Error('Не удалось найти координаты адреса');
-      }
-      const {lat, lon} = position;
-      setMapUrl(
-          `https://api.tomtom.com/map/1/staticimage?layer=basic&style=main&zoom=15&width=700&height=400&center=${lon},${lat}&format=png&key=${TOMTOM_API_KEY}&pois=${lon},${lat}`,
-      );
+      const staticMapUrl = `https://api.tomtom.com/map/1/staticimage?layer=basic&style=main&zoom=15&width=700&height=400&center=${lng},${lat}&format=png&key=${TOMTOM_API_KEY}&pois=${lng},${lat}`;
+      setMapUrl(staticMapUrl);
     } catch (_error) {
       setMapError('Не удалось загрузить карту');
     } finally {
@@ -106,11 +163,11 @@ export default function EventDetailScreen() {
           onIconPress={() => router.back()}
           title="Назад"
       >
-        <View style={styles.screen}>
+        <View style={[styles.screen, {backgroundColor: theme.colors.background}]}>
           <ScrollView
               contentContainerStyle={[
                 styles.content,
-                {paddingBottom: Spacing.six + insets.bottom},
+                {paddingBottom: Spacing.six + insets.bottom + 60},
               ]}
               showsVerticalScrollIndicator={false}
           >
@@ -119,30 +176,52 @@ export default function EventDetailScreen() {
                 style={styles.cover}
             />
 
-            <Chip compact style={styles.categoryBadge} textStyle={styles.categoryText}>
+            <Chip
+                compact
+                style={[styles.categoryBadge, {backgroundColor: theme.colors.primaryContainer}]}
+                textStyle={{color: theme.colors.onPrimaryContainer, fontSize: 12}}
+            >
               {event.category}
             </Chip>
 
-            <Text variant="headlineSmall" style={styles.eventTitle}>
+            <Text variant="headlineSmall" style={[styles.eventTitle, {color: theme.colors.onSurface}]}>
               {event.title}
             </Text>
 
-            <Surface elevation={2} style={styles.infoCard}>
+            <Surface
+                elevation={2}
+                style={[
+                  styles.infoCard,
+                  {backgroundColor: theme.colors.elevation.level2}
+                ]}
+            >
               <View style={styles.detailsRow}>
-                <Surface elevation={0} style={styles.detailCard}>
+                <Surface
+                    elevation={0}
+                    style={[styles.detailCard, {backgroundColor: theme.colors.surfaceVariant}]}
+                >
                   <Text variant="bodyLarge" style={styles.detailIcon}>
                     📅
                   </Text>
-                  <Text variant="bodyMedium" style={styles.detailText} numberOfLines={1}>
+                  <Text variant="bodyMedium" style={{color: theme.colors.onSurfaceVariant}} numberOfLines={1}>
                     {formattedDate}
                   </Text>
                 </Surface>
-                <Surface elevation={0} style={styles.detailCard}>
+
+                <Surface
+                    elevation={0}
+                    style={[styles.detailCard, {backgroundColor: theme.colors.surfaceVariant}]}
+                >
                   <Text variant="bodyLarge" style={styles.detailIcon}>
                     📍
                   </Text>
-                  <Text variant="bodyMedium" style={styles.detailText} numberOfLines={1} ellipsizeMode="tail">
-                    {event.address}
+                  <Text
+                      variant="bodyMedium"
+                      style={{color: theme.colors.onSurfaceVariant}}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                  >
+                    {addressName}
                   </Text>
                 </Surface>
               </View>
@@ -152,10 +231,10 @@ export default function EventDetailScreen() {
               </Button>
 
               <View style={styles.summaryRow}>
-                <Text variant="titleMedium" style={styles.summaryText}>
+                <Text variant="titleMedium" style={[styles.summaryText, {color: theme.colors.onSurface}]}>
                   {occupancyText}
                 </Text>
-                <Text variant="bodySmall" style={styles.summarySubtext}>
+                <Text variant="bodySmall" style={{color: theme.colors.onSurfaceVariant}}>
                   {event.reserved ?? 0}/{event.slots} занято
                 </Text>
               </View>
@@ -166,48 +245,59 @@ export default function EventDetailScreen() {
               />
             </Surface>
 
-            <Text variant="bodyLarge" style={styles.description}>
+            <Text variant="bodyLarge" style={[styles.description, {color: theme.colors.onSurface}]}>
               {event.description}
             </Text>
 
             {event.tags && event.tags.length > 0 && (
                 <View style={styles.tagsRow}>
-                  {event.tags.map((tag) => (
-                      <Chip key={tag.id} compact style={styles.tag}>
-                        #{tag.name}
+                  {event.tags.map((tag, idx) => (
+                      <Chip
+                          key={typeof tag === 'string' ? tag : tag.id ?? idx}
+                          compact
+                          style={[styles.tag, {backgroundColor: theme.colors.secondaryContainer}]}
+                          textStyle={{color: theme.colors.onSecondaryContainer}}
+                      >
+                        #{typeof tag === 'string' ? tag : tag.name}
                       </Chip>
                   ))}
                 </View>
             )}
 
-            <Surface elevation={2} style={styles.authorCard}>
-              <Text variant="labelLarge" style={styles.sectionTitle}>
+            <Surface
+                elevation={2}
+                style={[
+                  styles.authorCard,
+                  {
+                    backgroundColor: theme.colors.elevation.level2,
+                    borderColor: theme.colors.outlineVariant,
+                  }
+                ]}
+            >
+              <Text variant="labelLarge" style={[styles.sectionTitle, {color: theme.colors.onSurface}]}>
                 Организатор
               </Text>
               <View style={styles.authorRow}>
-                {event.author.avatar_url ? (
+                {event.author?.avatar_url ? (
                     <Avatar.Image
                         size={48}
                         source={{uri: event.author.avatar_url}}
-                        style={styles.authorAvatar}
+                        style={[styles.authorAvatar, {backgroundColor: theme.colors.primaryContainer}]}
                     />
                 ) : (
                     <Avatar.Text
                         size={48}
-                        label={event.author.name.charAt(0).toUpperCase()}
-                        style={styles.authorAvatar}
-                        labelStyle={styles.avatarLabel}
+                        label={event.author?.name ? event.author.name.charAt(0).toUpperCase() : '?'}
+                        style={[styles.authorAvatar, {backgroundColor: theme.colors.primaryContainer}]}
+                        labelStyle={{color: theme.colors.onPrimaryContainer}}
                     />
                 )}
                 <View style={styles.authorInfo}>
-                  <Text variant="bodyLarge" style={{fontWeight: '700'}}>
-                    {event.author.name}
+                  <Text variant="bodyLarge" style={{fontWeight: '700', color: theme.colors.onSurface}}>
+                    {event.author?.name}
                   </Text>
-                  <Text
-                      variant="bodyMedium"
-                      style={{color: theme.colors.onSurfaceVariant}}
-                  >
-                    {event.author.bio}
+                  <Text variant="bodyMedium" style={{color: theme.colors.onSurfaceVariant}}>
+                    {event.author?.bio}
                   </Text>
                 </View>
               </View>
@@ -217,13 +307,21 @@ export default function EventDetailScreen() {
               <Modal
                   visible={mapVisible}
                   onDismiss={() => setMapVisible(false)}
-                  contentContainerStyle={[styles.modal, {backgroundColor: theme.colors.surface}]}
+                  contentContainerStyle={[
+                    styles.modal,
+                    {backgroundColor: theme.colors.elevation.level3}
+                  ]}
               >
-                <Text variant="titleMedium" style={styles.modalTitle}>
+                <Text variant="titleMedium" style={[styles.modalTitle, {color: theme.colors.onSurface}]}>
                   Адрес на карте
                 </Text>
-                <Text variant="bodyMedium" style={styles.modalMeta} numberOfLines={1} ellipsizeMode="tail">
-                  {formattedDate}, {event.address}
+                <Text
+                    variant="bodyMedium"
+                    style={[styles.modalMeta, {color: theme.colors.onSurfaceVariant}]}
+                    numberOfLines={2}
+                    ellipsizeMode="tail"
+                >
+                  {formattedDate}, {addressName}
                 </Text>
                 {mapLoading && (
                     <View style={styles.modalLoader}>
@@ -231,7 +329,7 @@ export default function EventDetailScreen() {
                     </View>
                 )}
                 {mapError && (
-                    <Text variant="bodyMedium" style={styles.errorText}>
+                    <Text variant="bodyMedium" style={[styles.errorText, {color: theme.colors.error}]}>
                       {mapError}
                     </Text>
                 )}
@@ -245,16 +343,26 @@ export default function EventDetailScreen() {
             </Portal>
           </ScrollView>
 
-          <View style={[styles.footer, {paddingBottom: insets.bottom || Spacing.three}]}>
+          <Surface
+              elevation={2}
+              style={[
+                styles.footer,
+                {
+                  paddingBottom: insets.bottom || Spacing.three,
+                  backgroundColor: theme.colors.elevation.level2,
+                  borderTopColor: theme.colors.outlineVariant,
+                }
+              ]}
+          >
             <Button
                 mode="contained"
-                onPress={() => subscribeToEvent(event.id)}
+                onPress={() => event.member ? unsubscribeFromEvent(event.id, event.member) : subscribeToEvent(event.id)}
                 disabled={isFull}
                 style={styles.bottomButton}
             >
-              {isFull ? 'Мест нет' : 'Записаться'}
+              {event.member ? ' Отписаться' : (isFull ? 'Мест нет' : 'Записаться')}
             </Button>
-          </View>
+          </Surface>
         </View>
       </PageLayout>
   );
@@ -275,40 +383,23 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.three,
   },
   categoryBadge: {
-    backgroundColor: '#208AEF',
     borderRadius: Spacing.two,
     height: 28,
     alignSelf: 'flex-start',
     marginBottom: Spacing.two,
   },
-  categoryText: {color: '#FFFFFF', fontSize: 12},
   screen: {
     flex: 1,
-    backgroundColor: '#FAFBFF',
   },
   infoCard: {
     borderRadius: Spacing.three,
     padding: Spacing.four,
     gap: Spacing.three,
     marginBottom: Spacing.three,
-    backgroundColor: '#FFFFFF',
   },
   eventTitle: {
     fontWeight: '700',
     marginBottom: Spacing.three,
-  },
-  capacityBadge: {
-    alignItems: 'flex-end',
-    paddingVertical: Spacing.one,
-    paddingHorizontal: Spacing.three,
-    borderRadius: Spacing.three,
-    backgroundColor: '#F2F6FF',
-  },
-  capacityTitle: {
-    fontWeight: '700',
-  },
-  capacitySubtitle: {
-    color: '#6A6A6A',
   },
   detailsRow: {
     flexDirection: 'row',
@@ -319,13 +410,9 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: Spacing.three,
     padding: Spacing.three,
-    backgroundColor: '#F8FAFF',
   },
   detailIcon: {
     marginBottom: Spacing.one,
-  },
-  detailText: {
-    color: '#3C3C3C',
   },
   summaryRow: {
     flexDirection: 'row',
@@ -335,9 +422,6 @@ const styles = StyleSheet.create({
   },
   summaryText: {
     fontWeight: '700',
-  },
-  summarySubtext: {
-    color: '#6A6A6A',
   },
   mapButton: {
     marginTop: Spacing.one,
@@ -360,7 +444,6 @@ const styles = StyleSheet.create({
   },
   tag: {
     borderRadius: Spacing.three,
-    backgroundColor: '#F3F5FF',
     paddingHorizontal: Spacing.two,
     paddingVertical: Spacing.one,
   },
@@ -369,9 +452,7 @@ const styles = StyleSheet.create({
     padding: Spacing.four,
     gap: Spacing.three,
     marginBottom: Spacing.three,
-    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E6E9F2',
   },
   sectionTitle: {fontWeight: '700'},
   authorRow: {
@@ -380,12 +461,7 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   authorInfo: {flex: 1, gap: Spacing.half},
-  authorAvatar: {
-    backgroundColor: '#E7EEFF',
-  },
-  avatarLabel: {
-    color: '#1C3D7A',
-  },
+  authorAvatar: {},
   closeMapButton: {
     marginTop: Spacing.three,
   },
@@ -395,11 +471,8 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     paddingHorizontal: Spacing.three,
-    backgroundColor: '#FAFBFF',
     borderTopWidth: 1,
-    borderTopColor: '#E6E9F2',
     paddingTop: Spacing.three,
-    paddingBottom: Spacing.three,
   },
   bottomButton: {
     width: '100%',
@@ -420,12 +493,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   modalMeta: {
-    color: '#4A4A4A',
     marginBottom: Spacing.two,
-  },
-  modalAddress: {
-    marginBottom: Spacing.two,
-    color: '#6a6a6a',
   },
   modalLoader: {
     minHeight: 220,
@@ -433,11 +501,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   errorText: {
-    color: '#B00020',
     marginBottom: Spacing.two,
-  },
-  subscribeBtn: {
-    marginTop: Spacing.two,
-    marginBottom: Spacing.four,
   },
 });
