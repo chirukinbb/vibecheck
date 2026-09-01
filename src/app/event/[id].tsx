@@ -3,34 +3,31 @@ import {router, useLocalSearchParams} from 'expo-router';
 import {useEffect, useState} from 'react';
 import {Image, ScrollView, StyleSheet, View} from 'react-native';
 import {
-    ActivityIndicator,
-    Avatar,
-    Button,
-    Card,
-    Chip,
-    Modal,
-    Portal,
-    ProgressBar,
-    Surface,
-    Text,
-    useTheme,
+  ActivityIndicator,
+  Avatar,
+  Button,
+  Card,
+  Chip,
+  Modal,
+  Portal,
+  ProgressBar,
+  Surface,
+  Text,
+  useTheme,
 } from 'react-native-paper';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import * as Location from 'expo-location';
 
 import PageLayout from '@/components/page-layout';
 import {formatDate} from '@/constants/mock-data';
 import {MaxContentWidth, Spacing} from '@/constants/theme';
 import {useEventsStore} from '@/stores';
-import {subscribeToEvent, unsubscribeFromEvent} from "@/api";
-
-const TOMTOM_API_KEY = process.env.EXPO_PUBLIC_TOMTOM_API_KEY || process.env.TOMTOM_API_KEY;
+import {getAddressFromCoordinates, getStaticMapUrl} from '@/api'
 
 export default function EventDetailScreen() {
   const {id} = useLocalSearchParams<{ id: string }>();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const {selectedEvent, isLoadingSingle, error, fetchEvent, clearSelected} = useEventsStore();
+  const {selectedEvent, isLoadingSingle, error, fetchEvent, clearSelected, subscribe, unsubscribe} = useEventsStore();
 
   const [addressName, setAddressName] = useState<string>('Определение адреса…');
   const [mapVisible, setMapVisible] = useState(false);
@@ -50,81 +47,32 @@ export default function EventDetailScreen() {
   const lat = event?.coordinate_lat ? parseFloat(event.coordinate_lat) : null;
   const lng = event?.coordinate_lng ? parseFloat(event.coordinate_lng) : null;
 
-  // 1. Определение адреса: Сначала устройство (Expo Location), при ошибке/неудаче — TomTom Reverse Geocode API
+  // Определение адреса через сервис
   useEffect(() => {
-    if (lat === null || lng === null || isNaN(lat) || isNaN(lng)) {
-      setAddressName('Адрес не указан');
-      return;
-    }
-
     let isMounted = true;
 
-    const resolveAddress = async () => {
-      // ПОПЫТКА 1: Пробуем декодировать силами самого телефона через expo-location
-      try {
-        const geocoded = await Location.reverseGeocodeAsync({latitude: lat, longitude: lng});
-        if (geocoded && geocoded.length > 0) {
-          const item = geocoded[0];
-          const formatted = [item.city || item.region, item.street, item.name]
-              .filter(Boolean)
-              .join(', ');
-
-          if (formatted && isMounted) {
-            setAddressName(formatted);
-            return;
-          }
-        }
-      } catch (_err) {
-        // Телефон не сумел декодировать (например, нет разрешения, ошибки сервиса ОС и т.д.)
-        console.warn('Expo location reverse geocode failed, falling back to TomTom');
-      }
-
-      // ПОПЫТКА 2 (Фоллбэк): Если телефон не смог декодировать — запрашиваем TomTom API
-      try {
-        const response = await fetch(
-            `https://api.tomtom.com/search/2/reverseGeocode/${lat},${lng}.json?key=${TOMTOM_API_KEY}&language=ru-RU`
-        );
-        if (response.ok) {
-          const data = await response.json();
-          const freeformAddress = data.addresses?.[0]?.address?.freeformAddress;
-          if (freeformAddress && isMounted) {
-            setAddressName(freeformAddress);
-            return;
-          }
-        }
-      } catch (_tomTomErr) {
-        console.warn('TomTom reverse geocode also failed');
-      }
-
-      // ПОПЫТКА 3: Если ни телефон, ни TomTom не вербализовали координаты — выводим сами числа
+    getAddressFromCoordinates(lat, lng).then((resolvedAddress) => {
       if (isMounted) {
-        setAddressName(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+        setAddressName(resolvedAddress);
       }
-    };
-
-    resolveAddress();
+    });
 
     return () => {
       isMounted = false;
     };
   }, [lat, lng]);
 
-  // 2. Генерация ссылки на картинку статической карты TomTom
+  // Генерация карты через сервис
   const openMapModal = () => {
     setMapVisible(true);
-    if (lat === null || lng === null || isNaN(lat) || isNaN(lng)) {
-      setMapError('Координаты события отсутствуют');
-      return;
-    }
-
     setMapLoading(true);
     setMapError(null);
 
     try {
-      const staticMapUrl = `https://api.tomtom.com/map/1/staticimage?layer=basic&style=main&zoom=15&width=700&height=400&center=${lng},${lat}&format=png&key=${TOMTOM_API_KEY}&pois=${lng},${lat}`;
+      const staticMapUrl = getStaticMapUrl(lat, lng);
       setMapUrl(staticMapUrl);
-    } catch (_error) {
-      setMapError('Не удалось загрузить карту');
+    } catch (err: any) {
+      setMapError(err?.message || 'Не удалось загрузить карту');
     } finally {
       setMapLoading(false);
     }
@@ -343,32 +291,93 @@ export default function EventDetailScreen() {
             </Portal>
           </ScrollView>
 
-          <Surface
-              elevation={2}
-              style={[
-                styles.footer,
-                {
-                  paddingBottom: insets.bottom || Spacing.three,
-                  backgroundColor: theme.colors.elevation.level2,
-                  borderTopColor: theme.colors.outlineVariant,
-                }
-              ]}
-          >
-            <Button
-                mode="contained"
-                onPress={() => event.member ? unsubscribeFromEvent(event.id, event.member) : subscribeToEvent(event.id)}
-                disabled={isFull}
-                style={styles.bottomButton}
-            >
-              {event.member ? ' Отписаться' : (isFull ? 'Мест нет' : 'Записаться')}
-            </Button>
-          </Surface>
+          {Array.isArray(event.members) ? (
+              <Surface
+                  elevation={2}
+                  style={[
+                    styles.footer,
+                    {
+                      paddingBottom: insets.bottom || Spacing.three,
+                      backgroundColor: theme.colors.elevation.level2,
+                      borderTopColor: theme.colors.outlineVariant,
+                    },
+                  ]}
+              >
+                <View style={styles.organizerActions}>
+                  <Button
+                      mode="outlined"
+                      icon="pencil"
+                      onPress={() => router.push(`/event/edit/${event.id}`)}
+                      style={styles.organizerButton}
+                      compact
+                  >
+                    Изменить
+                  </Button>
+
+                  <Button
+                      mode="outlined"
+                      icon="account-group"
+                      onPress={() => router.push(`/event/members/${event.id}`)}
+                      style={styles.organizerButton}
+                      compact
+                  >
+                    Участники ({event.reserved ?? event.members.length})
+                  </Button>
+
+                  <Button
+                      mode="contained"
+                      icon="chat"
+                      onPress={() => router.push(`/event/chat/${event.id}`)}
+                      style={styles.organizerButton}
+                      compact
+                  >
+                    Чат
+                  </Button>
+                </View>
+              </Surface>
+          ) : (
+              <Surface
+                  elevation={2}
+                  style={[
+                    styles.footer,
+                    {
+                      paddingBottom: insets.bottom || Spacing.three,
+                      backgroundColor: theme.colors.elevation.level2,
+                      borderTopColor: theme.colors.outlineVariant,
+                    },
+                  ]}
+              >
+                <Button
+                    mode={event.member ? 'outlined' : 'contained'}
+                    onPress={() => {
+                      if (event.member) {
+                        unsubscribe(event.id).then(r => console.log(r));
+                      } else {
+                        subscribe(event.id).then(r => console.log(r));
+                      }
+                    }}
+                    disabled={!event.member && isFull}
+                    style={styles.bottomButton}
+                >
+                  {event.member ? 'Отписаться' : isFull ? 'Мест нет' : 'Записаться'}
+                </Button>
+              </Surface>
+          )}
         </View>
       </PageLayout>
   );
 }
 
 const styles = StyleSheet.create({
+  organizerActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: Spacing.one,
+  },
+  organizerButton: {
+    flex: 1,
+  },
   centered: {flex: 1, justifyContent: 'center', alignItems: 'center'},
   content: {
     maxWidth: MaxContentWidth,

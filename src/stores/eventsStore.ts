@@ -88,7 +88,7 @@ interface EventsState {
 
   // ─── Подписка / отзыв ───
   subscribe: (eventId: number) => Promise<string | null>;
-  unsubscribe: (eventId: number, memberId: number) => Promise<string | null>;
+  unsubscribe: (eventId: number) => Promise<string | null>;
   feedbackMember: (eventId: number, memberId: number, dto: MemberFeedbackDTO) => Promise<string | null>;
 }
 
@@ -202,6 +202,7 @@ export const useEventsStore = create<EventsState>((set, get) => ({
   editEvent: async (id, dto) => {
     set({isMutating: true, error: null});
     try {
+      console.log(dto, 'upd ev')
       const res = await updateEvent(id, dto);
       const updated = await getEvent(id);
       set((s) => ({
@@ -241,13 +242,15 @@ export const useEventsStore = create<EventsState>((set, get) => ({
   subscribe: async (eventId) => {
     set({isMutating: true, error: null});
     try {
-      const updatedEvent = await subscribeToEvent(eventId);
+      const updatedEvent = (await subscribeToEvent(eventId)).data;
+      console.log('updatedEvent', updatedEvent)
 
       set((s) => ({
         events: s.events.map((ev) =>
-            ev.id === eventId ? updatedEvent : ev
+            // Передаем { ...updatedEvent }, создавая новый объект
+            ev.id === eventId ? {...updatedEvent} : ev
         ),
-        selectedEvent: s.selectedEvent?.id === eventId ? updatedEvent : s.selectedEvent, // Исправлен ключик selectedEvent
+        selectedEvent: {...updatedEvent}
       }));
       return 'Подписка оформлена';
     } catch (e: any) {
@@ -259,14 +262,16 @@ export const useEventsStore = create<EventsState>((set, get) => ({
     }
   },
 
-  unsubscribe: async (eventId, memberId) => {
+  unsubscribe: async (eventId) => {
     set({isMutating: true, error: null});
     try {
-      const res = await unsubscribeFromEvent(eventId, memberId);
+      const updatedEvent = (await unsubscribeFromEvent(eventId)).data;
       set((s) => ({
         events: s.events.map((ev) =>
-            ev.id === eventId ? {...ev, reserved: Math.max(0, (ev.reserved ?? 0) - 1)} : ev
+            // Передаем { ...updatedEvent }, создавая новый объект
+            ev.id === eventId ? {...updatedEvent} : ev
         ),
+        selectedEvent: {...updatedEvent}
       }));
       return res.message;
     } catch (e: any) {

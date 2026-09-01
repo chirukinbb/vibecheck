@@ -92,10 +92,9 @@ export function subscribeToEvent(eventId: number): Promise<SuccessResponse> {
 /** DELETE /api/v1/event/{event}/member/{member}/unsubscribe — отписаться */
 export function unsubscribeFromEvent(
     eventId: number,
-    memberId: number,
 ): Promise<SuccessResponse> {
     return apiClient
-        .delete<SuccessResponse>(`/event/${eventId}/member/${memberId}/unsubscribe`)
+        .delete<SuccessResponse>(`/event/${eventId}/unsubscribe`)
         .then((r) => r.data);
 }
 

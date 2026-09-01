@@ -1,16 +1,11 @@
-// src/components/address-picker.tsx — адрес с модальным выбором и TomTom-подсказками
+// src/components/address-picker.tsx — адрес с модальным выбором и подсказками
 import {useEffect, useRef, useState} from 'react';
 import {Pressable, ScrollView, StyleSheet, View} from 'react-native';
 import {ActivityIndicator, Modal, Portal, Searchbar, Text, TextInput, useTheme} from 'react-native-paper';
 
-export type Coordinates = [number, number]; // [latitude, longitude]
+import {AddressSuggestion, Coordinates, fetchAddressSuggestions, getAddressFromCoordinates,} from '@/api';
 
-interface AddressSuggestion {
-  id: string;
-  label: string;
-  fullAddress: string;
-  coordinates: Coordinates;
-}
+export type {Coordinates};
 
 interface AddressPickerProps {
   label: string;
@@ -20,8 +15,6 @@ interface AddressPickerProps {
   onUseCurrentLocation: () => void | Promise<void>;
   locationLoading?: boolean;
 }
-
-const TOMTOM_API_KEY = process.env.EXPO_PUBLIC_TOMTOM_API_KEY || process.env.TOMTOM_API_KEY || 'BHEiGUcbB06ofsGybuUFTFReGMYYkoy9';
 
 export default function AddressPicker({
                                         label,
@@ -40,7 +33,7 @@ export default function AddressPicker({
   const [errorText, setErrorText] = useState('');
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 1. При получении/изменении координат делаем Reverse Geocoding для отображения понятного адреса в TextInput
+  // 1. Получение человекочитаемого адреса по координатам через сервис
   useEffect(() => {
     if (!value || (value[0] === 0 && value[1] === 0)) {
       setDisplayText('');
@@ -48,41 +41,26 @@ export default function AddressPicker({
     }
 
     let isMounted = true;
-    const fetchAddressFromCoords = async () => {
-      try {
-        const [lat, lng] = value;
-        const url = `https://api.tomtom.com/search/2/reverseGeocode/${lat},${lng}.json?key=${TOMTOM_API_KEY}&language=ru-RU`;
-        const response = await fetch(url);
-        if (response.ok) {
-          const data = await response.json();
-          const address = data.addresses?.[0]?.address?.freeformAddress;
-          if (address && isMounted) {
-            setDisplayText(address);
-          } else if (isMounted) {
-            setDisplayText(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
-          }
-        }
-      } catch {
-        if (isMounted) {
-          setDisplayText(`${value[0].toFixed(5)}, ${value[1].toFixed(5)}`);
-        }
-      }
-    };
+    const [lat, lng] = value;
 
-    fetchAddressFromCoords();
+    getAddressFromCoordinates(lat, lng).then((address) => {
+      if (isMounted) {
+        setDisplayText(address);
+      }
+    });
 
     return () => {
       isMounted = false;
     };
   }, [value]);
 
-  // 2. Обработка открытия модального окна
+  // 2. Открытие модального окна
   const handleOpenModal = () => {
     setInputText(displayText);
     setVisible(true);
   };
 
-  // 3. Поиск подсказок TomTom при вводе
+  // 3. Поиск подсказок адресов через сервис
   useEffect(() => {
     if (!visible) {
       if (timeoutRef.current) {
@@ -106,41 +84,7 @@ export default function AddressPicker({
 
     timeoutRef.current = setTimeout(async () => {
       try {
-        const url = `https://api.tomtom.com/search/2/search/${encodeURIComponent(text)}.json?key=${TOMTOM_API_KEY}&language=ru-RU&typeahead=true&limit=6`;
-        const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error('TomTom request failed');
-        }
-
-        const data = await response.json();
-        const results = Array.isArray(data.results) ? data.results : [];
-        const nextSuggestions = results
-            .map((item: any, index: number) => {
-              const address = item.address || {};
-              const label =
-                  address.freeformAddress ||
-                  address.streetName ||
-                  address.municipality ||
-                  address.country ||
-                  item.poi?.name ||
-                  item.name ||
-                  'Адрес';
-
-              // Извлекаем координаты из ответа TomTom
-              const position = item.position;
-              if (!label || !position || typeof position.lat !== 'number' || typeof position.lon !== 'number') {
-                return null;
-              }
-
-              return {
-                id: `${item.id || item.type || 'suggestion'}-${index}`,
-                label,
-                fullAddress: label,
-                coordinates: [position.lat, position.lon] as Coordinates,
-              } as AddressSuggestion;
-            })
-            .filter((item: AddressSuggestion | null): item is AddressSuggestion => Boolean(item));
-
+        const nextSuggestions = await fetchAddressSuggestions(text);
         setSuggestions(nextSuggestions);
         setErrorText('');
       } catch {

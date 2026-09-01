@@ -16,7 +16,7 @@ export {
 // События
 export {
     createEvent, deleteEvent, getEvent, getEvents, submitMemberFeedback, subscribeToEvent,
-    unsubscribeFromEvent, updateEvent
+    unsubscribe, updateEvent
 } from './events';
 
 // Категории
@@ -29,11 +29,16 @@ export { updateProfile } from './profile';
 export { updateFilter } from './filter';
 
 // Обратная связь
-export { sendFeedback } from './feedback';
+export {sendFeedback} from './feedback';
 
 // Языки
-export { getLanguages } from './languages';
+export {getLanguages} from './languages';
 
 // FCM-токен
-export { updateDeviceToken } from './device';
+export {updateDeviceToken} from './device';
+
+export {
+    AddressSuggestion, getCurrentCoordinates,
+    Coordinates, getAddressFromCoordinates, getStaticMapUrl, fetchAddressSuggestions
+} from './geo';
 

@@ -13,6 +13,7 @@ import PageLayout from '@/components/page-layout';
 import SingleSelect from '@/components/single-select';
 import {MaxContentWidth, Spacing} from '@/constants/theme';
 import {useCategoriesStore, useEventsStore} from '@/stores';
+import {useTagsStore} from "@/stores/tagsStore";
 
 export default function CreateEventScreen() {
   const theme = useTheme();
@@ -21,11 +22,16 @@ export default function CreateEventScreen() {
   const addEvent = useEventsStore((state) => state.addEvent);
   const isMutating = useEventsStore((state) => state.isMutating);
 
+  // Получение категорий тегов из useTagsStore
+  const suggestedTags = useTagsStore((state) => state.categories);
+  const fetchTags = useTagsStore((state) => state.fetchCategories ?? state.fetchTags);
+
   useEffect(() => {
     void fetchCategories();
-  }, [fetchCategories]);
-
-  const SUGGESTED_TAGS: string[] = [];
+    if (typeof fetchTags === 'function') {
+      void fetchTags();
+    }
+  }, [fetchCategories, fetchTags]);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -48,7 +54,6 @@ export default function CreateEventScreen() {
     if (!title || !categoryId || !coordinates || !slots || !planingTime) {
       return;
     }
-    console.log('Submitting event:', {title, categoryId, coordinates, slots, planingTime})
 
     const saved = await addEvent({
       title,
@@ -237,29 +242,32 @@ export default function CreateEventScreen() {
                       </View>
 
                       <ScrollView style={styles.list} nestedScrollEnabled>
-                        {SUGGESTED_TAGS.filter((tag) =>
-                            tag.toLowerCase().includes(tagQuery.toLowerCase()),
-                        ).map((tag) => {
-                          const selected = tags.includes(tag);
-                          return (
-                              <Chip
-                                  key={tag}
-                                  mode={selected ? 'flat' : 'outlined'}
-                                  selected={selected}
-                                  onPress={() => {
-                                    if (selected) {
-                                      setTags(tags.filter((t) => t !== tag));
-                                    } else {
-                                      setTags([...tags, nextTag]);
-                                    }
-                                  }}
-                                  style={styles.modalChip}
-                                  compact
-                              >
-                                #{tag}
-                              </Chip>
-                          );
-                        })}
+                        {(suggestedTags ?? [])
+                            .filter((tag) =>
+                                tag.name.toLowerCase().includes(tagQuery.toLowerCase()),
+                            )
+                            .map((tag) => {
+                              const tagName = tag.name;
+                              const selected = tags.includes(tagName);
+                              return (
+                                  <Chip
+                                      key={tag.id}
+                                      mode={selected ? 'flat' : 'outlined'}
+                                      selected={selected}
+                                      onPress={() => {
+                                        if (selected) {
+                                          setTags(tags.filter((t) => t !== tagName));
+                                        } else {
+                                          setTags([...tags, tagName]);
+                                        }
+                                      }}
+                                      style={styles.modalChip}
+                                      compact
+                                  >
+                                    #{tagName}
+                                  </Chip>
+                              );
+                            })}
                       </ScrollView>
 
                       <Button
