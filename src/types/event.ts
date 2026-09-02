@@ -21,7 +21,7 @@ interface EventBase {
     /** Текущее количество записавшихся (может быть null — известный баг бэкенда) */
     reserved: number | null;
     /** Unix timestamp (секунды) */
-    planing_time: number;
+    planing_time: number | string | null;
 }
 
 /**
@@ -40,12 +40,17 @@ export interface Event extends EventBase {
     coordinate_lat: string | null;
     /** Долгота (строка из БД) */
     coordinate_lng: string | null;
+    /** Альтернативные имена полей, которые иногда приходят из API */
+    coordinates_lat?: string | null;
+    coordinates_lng?: string | null;
+    /** Иногда приходит ID категории вместо строки */
+    category_id?: number;
     country: string | null;
     address: string;
     /** Профиль автора */
     author: EventAuthor;
-    /** Теги (если есть) */
-    tags: string[];
+    /** Теги (если есть) — могут быть строками или объектами `{id,name}` */
+    tags: Array<string | Tag>;
     /** Состоялось ли событие */
     is_happened?: number | null;
     member?: number;
@@ -68,12 +73,12 @@ export interface CreateEventDTO {
     title: string;
     description: string;
     /** Альтернатива thumbnail — путь к файлу */
-    thumb_path: string;
+    thumb_path?: string | undefined;
     address: [number, number];
     category_id: number;
     slots: number;
     /** Дата в формате d/m/Y H:i */
-    planing_time: string;
+    planing_time: number | null;
     /** Массив тегов (строки) */
     tags?: string[];
 }

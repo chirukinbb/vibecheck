@@ -1,4 +1,6 @@
 // src/stores/eventsStore.ts — события: список, пагинация, CRUD
+import {fileToFormData} from "@/constants/mock-data";
+import {ReactNativeFile} from "@/types/file";
 import {create} from 'zustand';
 import {
   createEvent,
@@ -13,8 +15,6 @@ import {
   updateEvent,
 } from '../api/events';
 import type {CreateEventDTO, Event, EventListItem, MemberFeedbackDTO, PaginationMeta, UpdateEventDTO} from '../types';
-import {fileToFormData} from "@/constants/mock-data";
-import {ReactNativeFile} from "@/types/file";
 
 export interface PayloadForValidation {
   title: string;
@@ -51,7 +51,7 @@ export function formatEventPayload(dto: Partial<CreateEventDTO> & Record<string,
     planing_time: planing_time !== null && planing_time !== undefined
         ? String(planing_time)
         : '',
-    thumbnail: fileToFormData(thumb_path),
+    thumbnail: thumb_path ? fileToFormData(thumb_path) : {uri: '', name: '', type: ''},
     tags,
   }; // <-- Закрывающая скобка была пропущена
 }
@@ -273,7 +273,7 @@ export const useEventsStore = create<EventsState>((set, get) => ({
         ),
         selectedEvent: {...updatedEvent}
       }));
-      return res.message;
+      return 'Отписка выполнена';
     } catch (e: any) {
       const msg = e?.message ?? 'Ошибка отписки';
       set({error: msg});

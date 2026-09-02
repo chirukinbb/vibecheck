@@ -18,21 +18,27 @@ export function getServerBaseUrl(): string {
 
 /** POST /api/v1/login — вход по email+паролю. Возвращает только токен. */
 export async function loginWithEmail(payload: LoginCredentials): Promise<LoginResponse> {
-    const {data} = await apiClient.post<LoginResponse>('/login', payload);
-    setAuthToken(data.data.token);
-    return data.data;
+    const res = await apiClient.post('/login', payload);
+    const raw = res.data as any;
+    // API historically returned either { token } or { data: { token } }
+    const data = raw.data ?? raw;
+    const token = data?.token;
+    if (token) setAuthToken(token);
+    return data as LoginResponse;
 }
 
 /** POST /api/v1/register — регистрация. Пароль придёт на email, токен НЕ возвращается. */
 export async function registerWithEmail(payload: RegisterCredentials): Promise<SuccessResponse> {
-    const {data} = await apiClient.post<SuccessResponse>('/register', payload);
-    return data.data;
+    const res = await apiClient.post('/register', payload);
+    const raw = res.data as any;
+    return (raw.data ?? raw) as SuccessResponse;
 }
 
 /** GET /api/v1/me — данные текущего пользователя (БЕЗ обёртки data и БЕЗ токена). */
 export async function getCurrentUser(): Promise<MeResponse> {
-    const {data} = await apiClient.get<MeResponse>('/me');
-    return data.data;
+    const res = await apiClient.get('/me');
+    const raw = res.data as any;
+    return (raw.data ?? raw) as MeResponse;
 }
 
 /** URL для редиректа пользователя на OAuth-провайдера */

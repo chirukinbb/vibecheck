@@ -24,7 +24,7 @@ export default function CreateEventScreen() {
 
   // Получение категорий тегов из useTagsStore
   const suggestedTags = useTagsStore((state) => state.categories);
-  const fetchTags = useTagsStore((state) => state.fetchCategories ?? state.fetchTags);
+  const fetchTags = useTagsStore((state) => state.fetchTags);
 
   useEffect(() => {
     void fetchCategories();

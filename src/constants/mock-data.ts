@@ -3,9 +3,9 @@
 import type {MeResponse} from '@/types/auth';
 import type {Category} from '@/types/category';
 import type {Event} from '@/types/event';
+import {ReactNativeFile} from "@/types/file";
 import type {GeoFilter} from '@/types/filter';
 import type {Profile} from '@/types/profile';
-import {ReactNativeFile} from "@/types/file";
 
 // ─── Категории ────────────────────────────────────────────────────────
 
@@ -228,8 +228,20 @@ export const AVAILABLE_LANGUAGES: { code: string; label: string }[] = [
 
 // ─── Хелперы ──────────────────────────────────────────────────────────
 
-export function formatDate(ts: number): string {
-  const d = new Date(ts * 1000);
+export function formatDate(ts: number | string | null): string {
+  if (ts === null || ts === undefined) return '';
+  let seconds: number;
+  if (typeof ts === 'number') {
+    seconds = ts;
+  } else if (/^\d+$/.test(ts)) {
+    seconds = parseInt(ts, 10);
+  } else {
+    const ms = Date.parse(ts);
+    if (isNaN(ms)) return '';
+    seconds = Math.floor(ms / 1000);
+  }
+
+  const d = new Date(seconds * 1000);
   return d.toLocaleDateString('ru-RU', {
     day: 'numeric',
     month: 'long',
@@ -238,8 +250,20 @@ export function formatDate(ts: number): string {
   });
 }
 
-export function formatDateShort(ts: number): string {
-  const d = new Date(ts * 1000);
+export function formatDateShort(ts: number | string | null): string {
+  if (ts === null || ts === undefined) return '';
+  let seconds: number;
+  if (typeof ts === 'number') {
+    seconds = ts;
+  } else if (/^\d+$/.test(ts)) {
+    seconds = parseInt(ts, 10);
+  } else {
+    const ms = Date.parse(ts);
+    if (isNaN(ms)) return '';
+    seconds = Math.floor(ms / 1000);
+  }
+
+  const d = new Date(seconds * 1000);
   return d.toLocaleDateString('ru-RU', {
     day: 'numeric',
     month: 'short',
@@ -267,4 +291,10 @@ export function fileToFormData(filepath: string): ReactNativeFile {
       type: type,            // MIME-тип (например, image/webp или image/jpeg)
     };
   }
+  // Если имя файла не найдено, возвращаем базовый объект вместо undefined
+  return {
+    uri: filepath,
+    name: 'file',
+    type: 'application/octet-stream',
+  };
 }

@@ -16,12 +16,12 @@ import {
 } from 'react-native-paper';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
+import {getCurrentCoordinates} from '@/api';
 import AddressPicker, {Coordinates} from '@/components/address-picker';
 import ImagePickerWithCrop from '@/components/image-picker';
 import PageLayout from '@/components/page-layout';
 import SingleSelect from '@/components/single-select';
 import {MaxContentWidth, Spacing} from '@/constants/theme';
-import {getCurrentCoordinates} from '@/api';
 import {useCategoriesStore, useEventsStore} from '@/stores';
 import {useTagsStore} from '@/stores/tagsStore';
 
@@ -33,7 +33,7 @@ export default function EditEventScreen() {
     const fetchCategories = useCategoriesStore((state) => state.fetchCategories);
 
     const suggestedTags = useTagsStore((state) => state.categories);
-    const fetchTags = useTagsStore((state) => state.fetchCategories ?? state.fetchTags);
+    const fetchTags = useTagsStore((state) => state.fetchTags);
 
     const {
         selectedEvent,

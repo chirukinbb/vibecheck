@@ -1,7 +1,7 @@
 // src/stores/categoriesStore.ts — категории (статический справочник)
 import {create} from 'zustand';
-import type {Category} from '../types';
 import {getCategories} from '../api/categories';
+import type {Category} from '../types';
 
 interface CategoriesState {
   categories: Category[];
@@ -19,7 +19,7 @@ export const useCategoriesStore = create<CategoriesState>((set) => ({
   fetchCategories: async () => {
     set({isLoading: true, error: null});
     try {
-      const data = (await getCategories()).data;
+      const data = await getCategories();
       set({categories: data});
     } catch (e: any) {
       set({error: e?.message ?? 'Ошибка загрузки категорий'});

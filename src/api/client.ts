@@ -23,7 +23,13 @@ export const apiClient: AxiosInstance = axios.create({
 });
 
 export function setAuthToken(token: string): void {
-  authToken = token;
+    authToken = token;
+    // Поддерживаем старый код, который полагается на axios.defaults.headers
+    if (token) {
+        apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    } else {
+        delete apiClient.defaults.headers.common['Authorization'];
+    }
 }
 
 export function clearAuthToken(): void {

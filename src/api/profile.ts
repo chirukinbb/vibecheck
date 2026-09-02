@@ -1,7 +1,7 @@
 // src/api/profile.ts — профиль пользователя
-import {apiClient} from './client';
-import type {ProfileUpdateDTO, SuccessResponse} from '../types';
 import {fileToFormData} from "@/constants/mock-data";
+import type {Profile, ProfileUpdateDTO} from '../types';
+import {apiClient} from './client';
 
 // Хелпер для создания объекта FormData из вашей DTO
 export const createProfileFormData = (data: ProfileUpdateDTO): FormData => {
@@ -31,8 +31,8 @@ export const createProfileFormData = (data: ProfileUpdateDTO): FormData => {
 };
 
 /** PATCH /api/v1/profile — обновить профиль */
-export function updateProfile(dto: ProfileUpdateDTO): Promise<SuccessResponse> {
-  return apiClient.patch<SuccessResponse>('/profile', createProfileFormData(dto), {
+export function updateProfile(dto: ProfileUpdateDTO): Promise<Profile> {
+  return apiClient.patch<Profile>('/profile', createProfileFormData(dto), {
     headers: {
       'Content-Type': 'multipart/form-data',
     },

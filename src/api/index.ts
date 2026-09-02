@@ -16,7 +16,7 @@ export {
 // События
 export {
     createEvent, deleteEvent, getEvent, getEvents, submitMemberFeedback, subscribeToEvent,
-    unsubscribe, updateEvent
+    unsubscribeFromEvent as unsubscribe, updateEvent
 } from './events';
 
 // Категории
@@ -38,7 +38,11 @@ export {getLanguages} from './languages';
 export {updateDeviceToken} from './device';
 
 export {
-    AddressSuggestion, getCurrentCoordinates,
-    Coordinates, getAddressFromCoordinates, getStaticMapUrl, fetchAddressSuggestions
+    AddressSuggestion,
+    Coordinates,
+    fetchAddressSuggestions,
+    getAddressFromCoordinates,
+    getCurrentCoordinates,
+    getStaticMapUrl
 } from './geo';
 

@@ -1,4 +1,5 @@
 // src/api/events.ts — события: CRUD, подписка, отзывы
+import {fileToFormData} from "@/constants/mock-data";
 import type {
     ApiResponse,
     CreateEventDTO,
@@ -10,7 +11,6 @@ import type {
     UpdateEventDTO,
 } from '../types';
 import {apiClient} from './client';
-import {fileToFormData} from "@/constants/mock-data";
 
 // ─── Список событий ──────────────────────────────────────────────────
 
@@ -43,20 +43,25 @@ export function getEvent(id: number): Promise<ApiResponse<Event>> {
     return apiClient.get<ApiResponse<Event>>(`/event/${id}`).then((r) => r.data);
 }
 
-function eventFormData(dto: CreateEventDTO): FormData {
+function eventFormData(dto: Partial<CreateEventDTO>): FormData {
     const fd = new FormData();
-    fd.append('title', dto.title);
-    fd.append('description', dto.description);
+
+    if (dto.title !== undefined) fd.append('title', String(dto.title));
+    if (dto.description !== undefined) fd.append('description', String(dto.description));
 
     if (dto.thumb_path && !dto.thumb_path.startsWith('https://')) {
-        fd.append('thumbnail', fileToFormData(dto.thumb_path));
-    } else fd.append('thumbnail_url', dto.thumb_path)
+        // React Native File shape isn't assignable to browser Blob type, cast to any
+        fd.append('thumbnail', fileToFormData(dto.thumb_path) as unknown as any);
+    } else if (dto.thumb_path !== undefined) {
+        fd.append('thumbnail_url', String(dto.thumb_path));
+    }
 
-    dto.address?.forEach((tag) => fd.append('address[]', tag));
-    fd.append('category_id', String(dto.category_id));
-    fd.append('slots', String(dto.slots));
-    fd.append('planing_time', dto.planing_time);
-    dto.tags?.forEach((tag) => fd.append('tags[]', tag));
+    // address may be [lat, lng] — convert each element to string when appending
+    dto.address?.forEach((addr) => fd.append('address[]', String(addr)));
+    if (dto.category_id !== undefined) fd.append('category_id', String(dto.category_id));
+    if (dto.slots !== undefined) fd.append('slots', String(dto.slots));
+    if (dto.planing_time !== undefined) fd.append('planing_time', String(dto.planing_time));
+    dto.tags?.forEach((tag) => fd.append('tags[]', String(tag)));
 
     return fd;
 }
@@ -85,16 +90,16 @@ export function deleteEvent(id: number): Promise<SuccessResponse> {
 // ─── Подписка / отписка ──────────────────────────────────────────────
 
 /** POST /api/v1/event/{id}/subscribe — записаться на событие */
-export function subscribeToEvent(eventId: number): Promise<SuccessResponse> {
-    return apiClient.post<SuccessResponse>(`/event/${eventId}/subscribe`).then((r) => r.data);
+export function subscribeToEvent(eventId: number): Promise<ApiResponse<Event>> {
+    return apiClient.post<ApiResponse<Event>>(`/event/${eventId}/subscribe`).then((r) => r.data);
 }
 
 /** DELETE /api/v1/event/{event}/member/{member}/unsubscribe — отписаться */
 export function unsubscribeFromEvent(
     eventId: number,
-): Promise<SuccessResponse> {
+): Promise<ApiResponse<Event>> {
     return apiClient
-        .delete<SuccessResponse>(`/event/${eventId}/unsubscribe`)
+        .delete<ApiResponse<Event>>(`/event/${eventId}/unsubscribe`)
         .then((r) => r.data);
 }
 

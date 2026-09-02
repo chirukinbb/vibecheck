@@ -19,7 +19,7 @@ export const useProfileStore = create<ProfileState>((set) => ({
   saveProfile: async (dto) => {
     set({isUpdating: true, error: null});
     try {
-      const res = (await updateProfile(dto)).data;
+      const res = await updateProfile(dto);
       // Синхронизируем с authStore
       useAuthStore.getState().setProfile({
         name: res.name,
@@ -27,7 +27,7 @@ export const useProfileStore = create<ProfileState>((set) => ({
         languages: res.languages,
         bio: res.bio,
       });
-      return res.message;
+      return 'Профиль обновлён';
     } catch (e: any) {
       const msg = e?.message ?? 'Ошибка обновления профиля';
       set({error: msg});
