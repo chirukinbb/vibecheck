@@ -11,6 +11,7 @@ import {
     Portal,
     Searchbar,
     Surface,
+    Text,
     TextInput,
     useTheme
 } from 'react-native-paper';
@@ -55,6 +56,11 @@ export default function EditEventScreen() {
     const [tagModalVisible, setTagModalVisible] = useState(false);
     const [tagQuery, setTagQuery] = useState('');
     const [thumbnail, setThumbnail] = useState<string | null>(null);
+    const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+    const reservedCount = Number(selectedEvent?.reserved ?? (Array.isArray(selectedEvent?.members) ? selectedEvent.members.length : 0));
+    const slotsNumber = Number(slots || 0);
+    const slotsTooSmall = slotsNumber < reservedCount;
 
     // 1. Загрузка данных
     useEffect(() => {
@@ -119,22 +125,35 @@ export default function EditEventScreen() {
 
     const handleSubmit = async () => {
         if (!id || !title || !categoryId || !coordinates || !slots || !planingTime) {
+            setFeedback({type: 'error', text: 'Заполните все обязательные поля'});
             return;
         }
 
-        const saved = await editEvent(Number(id), {
-            title,
-            description,
-            category_id: categoryId,
-            address: coordinates,
-            planing_time: planingTime ? Math.floor(planingTime.getTime() / 1000) : null,
-            slots: Number(slots),
-            tags,
-            thumb_path: thumbnail ?? undefined,
-        });
+        if (slotsTooSmall) {
+            setFeedback({type: 'error', text: `Нельзя установить мест меньше, чем уже занято (${reservedCount})`});
+            return;
+        }
 
-        if (saved) {
-            router.back();
+        setFeedback(null);
+        try {
+            const saved = await editEvent(Number(id), {
+                title,
+                description,
+                category_id: categoryId,
+                address: coordinates,
+                planing_time: planingTime ? Math.floor(planingTime.getTime() / 1000) : null,
+                slots: Number(slots),
+                tags,
+                thumb_path: thumbnail ?? undefined,
+            });
+            if (saved) {
+                setFeedback({type: 'success', text: 'Изменения сохранены'});
+                router.back();
+            } else {
+                setFeedback({type: 'error', text: 'Не удалось сохранить изменения'});
+            }
+        } catch (e: any) {
+            setFeedback({type: 'error', text: e?.message ?? 'Ошибка при сохранении'});
         }
     };
 
@@ -145,10 +164,10 @@ export default function EditEventScreen() {
             if (coords) {
                 setCoordinates(coords);
             } else {
-                alert('Нет доступа к геолокации');
+                setFeedback({type: 'error', text: 'Нет доступа к геолокации'});
             }
         } catch (e) {
-            alert('Не удалось определить местоположение');
+            setFeedback({type: 'error', text: 'Не удалось определить местоположение'});
         } finally {
             setLocationLoading(false);
         }
@@ -245,6 +264,11 @@ export default function EditEventScreen() {
                                 keyboardType="numeric"
                                 placeholder="20"
                             />
+                            {slotsTooSmall && (
+                                <Text style={{color: theme.colors.error}}>
+                                    Нельзя установить мест меньше, чем уже занято: {reservedCount}
+                                </Text>
+                            )}
 
                             {/* Теги */}
                             <View style={styles.tagField}>
@@ -383,11 +407,31 @@ export default function EditEventScreen() {
                             </View>
 
                             {/* Кнопка отправки */}
+                            {feedback && (
+                                <Text
+                                    style={[
+                                        feedback.type === 'success' ? styles.feedbackSuccess : styles.feedbackError,
+                                        {
+                                            backgroundColor:
+                                                feedback.type === 'success'
+                                                    ? theme.colors.primaryContainer
+                                                    : theme.colors.errorContainer,
+                                            color:
+                                                feedback.type === 'success'
+                                                    ? theme.colors.onPrimaryContainer
+                                                    : theme.colors.onErrorContainer,
+                                        },
+                                    ]}
+                                >
+                                    {feedback.text}
+                                </Text>
+                            )}
+
                             <Button
                                 mode="contained"
                                 onPress={handleSubmit}
                                 loading={isMutating}
-                                disabled={isMutating || !title || !categoryId || !coordinates || !slots || !planingTime}
+                                disabled={isMutating || !title || !categoryId || !coordinates || !slots || !planingTime || slotsTooSmall}
                                 style={styles.submitBtn}
                             >
                                 Сохранить изменения
@@ -460,4 +504,18 @@ const styles = StyleSheet.create({
         aspectRatio: 16 / 9,
     },
     submitBtn: {marginTop: Spacing.two},
+    feedbackSuccess: {
+        borderRadius: 10,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        fontSize: 13,
+        textAlign: 'center',
+    },
+    feedbackError: {
+        borderRadius: 10,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        fontSize: 13,
+        textAlign: 'center',
+    },
 });

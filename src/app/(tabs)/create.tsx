@@ -4,7 +4,7 @@ import * as Location from 'expo-location';
 import {router} from 'expo-router';
 import {useEffect, useState} from 'react';
 import {Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View} from 'react-native';
-import {Button, Chip, Modal, Portal, Searchbar, Surface, TextInput, useTheme} from 'react-native-paper';
+import {Button, Chip, Modal, Portal, Searchbar, Surface, Text, TextInput, useTheme} from 'react-native-paper';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import AddressPicker, {Coordinates} from '@/components/address-picker';
@@ -45,6 +45,7 @@ export default function CreateEventScreen() {
   const [tagModalVisible, setTagModalVisible] = useState(false);
   const [tagQuery, setTagQuery] = useState('');
   const [thumbnail, setThumbnail] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const handleThumbnailSelected = (uri: string) => {
     setThumbnail(uri);
@@ -52,22 +53,30 @@ export default function CreateEventScreen() {
 
   const handleSubmit = async () => {
     if (!title || !categoryId || !coordinates || !slots || !planingTime) {
+      setFeedback({type: 'error', text: 'Заполните все обязательные поля'});
       return;
     }
 
-    const saved = await addEvent({
-      title,
-      description,
-      category_id: categoryId,
-      address: coordinates,
-      planing_time: planingTime ? Math.floor(planingTime.getTime() / 1000) : null,
-      slots: Number(slots),
-      tags,
-      thumb_path: thumbnail ?? undefined,
-    });
-
-    if (saved) {
-      router.back();
+    setFeedback(null);
+    try {
+      const saved = await addEvent({
+        title,
+        description,
+        category_id: categoryId,
+        address: coordinates,
+        planing_time: planingTime ? Math.floor(planingTime.getTime() / 1000) : null,
+        slots: Number(slots),
+        tags,
+        thumb_path: thumbnail ?? undefined,
+      });
+      if (saved) {
+        setFeedback({type: 'success', text: 'Событие создано'});
+        router.back();
+      } else {
+        setFeedback({type: 'error', text: 'Не удалось сохранить событие'});
+      }
+    } catch (e: any) {
+      setFeedback({type: 'error', text: e?.message ?? 'Ошибка при создании события'});
     }
   };
 
@@ -76,7 +85,7 @@ export default function CreateEventScreen() {
     try {
       const {status} = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        alert('Нет доступа к геолокации');
+        setFeedback({type: 'error', text: 'Нет доступа к геолокации'});
         return;
       }
       const position = await Location.getCurrentPositionAsync({
@@ -85,7 +94,7 @@ export default function CreateEventScreen() {
 
       setCoordinates([position.coords.latitude, position.coords.longitude]);
     } catch (e) {
-      alert('Не удалось определить местоположение');
+      setFeedback({type: 'error', text: 'Не удалось определить местоположение'});
     } finally {
       setLocationLoading(false);
     }
@@ -313,6 +322,25 @@ export default function CreateEventScreen() {
                 </View>
 
                 {/* Сабмит */}
+                {feedback && (
+                    <Text
+                        style={[
+                          feedback.type === 'success' ? styles.feedbackSuccess : styles.feedbackError,
+                          {
+                            backgroundColor:
+                                feedback.type === 'success'
+                                    ? theme.colors.primaryContainer
+                                    : theme.colors.errorContainer,
+                            color:
+                                feedback.type === 'success'
+                                    ? theme.colors.onPrimaryContainer
+                                    : theme.colors.onErrorContainer,
+                          },
+                        ]}
+                    >
+                      {feedback.text}
+                    </Text>
+                )}
                 <Button
                     mode="contained"
                     onPress={handleSubmit}
@@ -386,4 +414,18 @@ const styles = StyleSheet.create({
     aspectRatio: 16 / 9,
   },
   submitBtn: {marginTop: Spacing.two},
+  feedbackSuccess: {
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 13,
+    textAlign: 'center',
+  },
+  feedbackError: {
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 13,
+    textAlign: 'center',
+  },
 });

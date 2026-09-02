@@ -156,7 +156,7 @@ export default function LoginScreen() {
                 ]}
             >
               <Text variant="headlineMedium" style={[styles.title, {color: theme.colors.onSurface}]}>
-                Events
+                VibeCheck
               </Text>
               <Text
                   variant="bodyLarge"

@@ -82,8 +82,8 @@ interface EventsState {
   clearSelected: () => void;
 
   // ─── Действия: мутации ───
-  addEvent: (dto: CreateEventDTO) => Promise<string | null>;
-  editEvent: (id: number, dto: UpdateEventDTO) => Promise<string | null>;
+  addEvent: (dto: CreateEventDTO) => Promise<boolean | string | null>;
+  editEvent: (id: number, dto: UpdateEventDTO) => Promise<boolean | string | null>;
   removeEvent: (id: number) => Promise<string | null>;
 
   // ─── Подписка / отзыв ───
@@ -209,7 +209,7 @@ export const useEventsStore = create<EventsState>((set, get) => ({
         events: s.events.map((ev) => (ev.id === id ? updated.data : ev)),
         selectedEvent: s.selectedEvent?.id === id ? updated.data : s.selectedEvent,
       }));
-      return res.message;
+      return res.message ?? true;
     } catch (e: any) {
       const msg = e?.message ?? 'Ошибка обновления';
       set({error: msg});

@@ -16,26 +16,28 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 export default function ProfileScreen() {
   const theme = useTheme();
-  const themeMode = useSettingsStore((state) => state.themeMode);
-  const setThemeMode = useSettingsStore((state) => state.setThemeMode);
-  const profile = useAuthStore((state) => state.profile);
-  const filter = useAuthStore((state) => state.filter);
-  const categories = useCategoriesStore((state) => state.categories);
-  const fetchCategories = useCategoriesStore((state) => state.fetchCategories);
-  const {saveProfile, isUpdating: isProfileUpdating} = useProfileStore();
-  const {saveFilter, isUpdating: isFilterUpdating} = useFilterStore();
-  const [activeTab, setActiveTab] = useState<'profile' | 'filter' | 'settings'>('profile');
-  const [locationLoading, setLocationLoading] = useState(false);
+    const themeMode = useSettingsStore((state) => state.themeMode);
+    const setThemeMode = useSettingsStore((state) => state.setThemeMode);
+    const profile = useAuthStore((state) => state.profile);
+    const filter = useAuthStore((state) => state.filter);
+    const categories = useCategoriesStore((state) => state.categories);
+    const fetchCategories = useCategoriesStore((state) => state.fetchCategories);
+    const {saveProfile, isUpdating: isProfileUpdating} = useProfileStore();
+    const {saveFilter, isUpdating: isFilterUpdating} = useFilterStore();
+    const [activeTab, setActiveTab] = useState<'profile' | 'filter' | 'settings'>('profile');
+    const [locationLoading, setLocationLoading] = useState(false);
+    const [profileFeedback, setProfileFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+    const [filterFeedback, setFilterFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  useEffect(() => {
-    void fetchCategories();
-  }, [fetchCategories]);
+    useEffect(() => {
+        void fetchCategories();
+    }, [fetchCategories]);
 
-  useEffect(() => {
-    if (!profile) return;
-    setName(profile.name ?? '');
-    setLanguages(profile.languages ?? ['ru', 'en']);
-    setBio(profile.bio ?? '');
+    useEffect(() => {
+        if (!profile) return;
+        setName(profile.name ?? '');
+        setLanguages(profile.languages ?? ['ru', 'en']);
+        setBio(profile.bio ?? '');
     setAvatarUri(profile.avatar_url ?? null);
   }, [profile]);
 
@@ -60,29 +62,43 @@ export default function ProfileScreen() {
   }, [filter]);
 
   const handleSaveProfile = async () => {
-    const message = await saveProfile({
-      name,
-      avatar_url: avatarUri,
-      languages,
-      bio,
-    });
+      setProfileFeedback(null);
+      try {
+          const message = await saveProfile({
+              name,
+              avatar_url: avatarUri,
+              languages,
+              bio,
+          });
 
-    if (message) {
-      alert(message);
-    }
+          if (message) {
+              setProfileFeedback({type: 'success', text: String(message)});
+          } else {
+              setProfileFeedback({type: 'success', text: 'Профиль сохранён'});
+          }
+      } catch (e: any) {
+          setProfileFeedback({type: 'error', text: e?.message ?? 'Ошибка при сохранении профиля'});
+      }
   };
 
   const handleSaveFilter = async () => {
-    const nextRadius = Number(radius) || 10;
-    const message = await saveFilter({
-      center: filterAddress,
-      radius: nextRadius,
-      categories: selectedCategories,
-    });
+      const nextRadius = Number(radius) || 10;
+      setFilterFeedback(null);
+      try {
+          const message = await saveFilter({
+              center: filterAddress,
+              radius: nextRadius,
+              categories: selectedCategories,
+          });
 
-    if (message) {
-      alert(message);
-    }
+          if (message) {
+              setFilterFeedback({type: 'success', text: String(message)});
+          } else {
+              setFilterFeedback({type: 'success', text: 'Фильтр сохранён'});
+          }
+      } catch (e: any) {
+          setFilterFeedback({type: 'error', text: e?.message ?? 'Ошибка при сохранении фильтра'});
+      }
   };
 
   const handleUseCurrentLocation = async () => {
@@ -90,7 +106,7 @@ export default function ProfileScreen() {
     try {
       const {status} = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        alert('Нет доступа к геолокации');
+          setFilterFeedback({type: 'error', text: 'Нет доступа к геолокации'});
         return;
       }
       const position = await Location.getCurrentPositionAsync({
@@ -98,7 +114,7 @@ export default function ProfileScreen() {
       });
       setFilterAddress([Number(position.coords.latitude), Number(position.coords.longitude)] as [number, number]);
     } catch (e) {
-      alert('Не удалось определить местоположение');
+        setFilterFeedback({type: 'error', text: 'Не удалось определить местоположение'});
     } finally {
       setLocationLoading(false);
     }
@@ -221,14 +237,33 @@ export default function ProfileScreen() {
                           placeholder="Расскажите о себе..."
                       />
 
-                      <Button
-                          mode="contained"
-                          onPress={handleSaveProfile}
-                          loading={isProfileUpdating}
-                          disabled={isProfileUpdating}
-                      >
-                        Сохранить профиль
-                      </Button>
+                        <Button
+                            mode="contained"
+                            onPress={handleSaveProfile}
+                            loading={isProfileUpdating}
+                            disabled={isProfileUpdating}
+                        >
+                            Сохранить профиль
+                        </Button>
+                        {profileFeedback && (
+                            <Text
+                                style={[
+                                    profileFeedback.type === 'success' ? styles.feedbackSuccess : styles.feedbackError,
+                                    {
+                                        backgroundColor:
+                                            profileFeedback.type === 'success'
+                                                ? theme.colors.primaryContainer
+                                                : theme.colors.errorContainer,
+                                        color:
+                                            profileFeedback.type === 'success'
+                                                ? theme.colors.onPrimaryContainer
+                                                : theme.colors.onErrorContainer,
+                                    },
+                                ]}
+                            >
+                                {profileFeedback.text}
+                            </Text>
+                        )}
                     </View>
                 )}
 
@@ -262,14 +297,33 @@ export default function ProfileScreen() {
                           onChange={setSelectedCategories}
                       />
 
-                      <Button
-                          mode="contained"
-                          onPress={handleSaveFilter}
-                          loading={isFilterUpdating}
-                          disabled={isFilterUpdating}
-                      >
-                        Сохранить фильтр
-                      </Button>
+                        <Button
+                            mode="contained"
+                            onPress={handleSaveFilter}
+                            loading={isFilterUpdating}
+                            disabled={isFilterUpdating}
+                        >
+                            Сохранить фильтр
+                        </Button>
+                        {filterFeedback && (
+                            <Text
+                                style={[
+                                    filterFeedback.type === 'success' ? styles.feedbackSuccess : styles.feedbackError,
+                                    {
+                                        backgroundColor:
+                                            filterFeedback.type === 'success'
+                                                ? theme.colors.primaryContainer
+                                                : theme.colors.errorContainer,
+                                        color:
+                                            filterFeedback.type === 'success'
+                                                ? theme.colors.onPrimaryContainer
+                                                : theme.colors.onErrorContainer,
+                                    },
+                                ]}
+                            >
+                                {filterFeedback.text}
+                            </Text>
+                        )}
                     </View>
                 )}
 
@@ -348,14 +402,28 @@ const styles = StyleSheet.create({
   },
   segmented: {marginBottom: Spacing.two},
   sectionTitle: {
-    fontWeight: '700',
-    paddingBottom: Spacing.one,
+      fontWeight: '700',
+      paddingBottom: Spacing.one,
   },
-  tabContent: {
-    gap: Spacing.three,
-  },
-  logoutBtn: {
-    marginTop: Spacing.two,
-    width: '100%',
-  },
+    tabContent: {
+        gap: Spacing.three,
+    },
+    logoutBtn: {
+        marginTop: Spacing.two,
+        width: '100%',
+    },
+    feedbackSuccess: {
+        borderRadius: 10,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        fontSize: 13,
+        textAlign: 'center',
+    },
+    feedbackError: {
+        borderRadius: 10,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        fontSize: 13,
+        textAlign: 'center',
+    },
 });

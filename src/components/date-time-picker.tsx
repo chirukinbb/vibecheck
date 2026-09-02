@@ -32,7 +32,10 @@ const DirectPicker = ({label = 'Дата и время', value, onChange}: Direc
         : '';
 
     const openPicker = () => {
-        setDraftDate(date ?? new Date());
+        const minDate = new Date(Date.now() + 6 * 60 * 60 * 1000);
+        const initial = date ?? new Date();
+        const initialTime = initial.getTime() < minDate.getTime() ? new Date(minDate) : new Date(initial);
+        setDraftDate(initialTime);
         setPickerMode(Platform.OS === 'ios' ? 'datetime' : 'date');
         setShow(true);
     };
@@ -49,17 +52,31 @@ const DirectPicker = ({label = 'Дата и время', value, onChange}: Direc
         }
 
         if (Platform.OS === 'ios') {
-            setDate(selectedDate);
-            onChange(selectedDate);
+            const minDate = new Date(Date.now() + 6 * 60 * 60 * 1000);
+            let nextIos = new Date(selectedDate);
+            if (nextIos.getTime() < minDate.getTime()) nextIos = new Date(minDate);
+            setDate(nextIos);
+            onChange(nextIos);
             setShow(false);
             setPickerMode(null);
             return;
         }
 
+        const minDate = new Date(Date.now() + 6 * 60 * 60 * 1000);
+
         if (pickerMode === 'date') {
             const nextValue = new Date(selectedDate);
-            nextValue.setHours(draftDate?.getHours() ?? 0);
-            nextValue.setMinutes(draftDate?.getMinutes() ?? 0);
+            // determine base time (from draftDate), but ensure it's not earlier than minDate when the same day
+            const base = draftDate ?? new Date();
+            if (nextValue.toDateString() === minDate.toDateString()) {
+                // if selected day equals min day, ensure time >= min time
+                const safeBase = base.getTime() < minDate.getTime() ? minDate : base;
+                nextValue.setHours(safeBase.getHours());
+                nextValue.setMinutes(safeBase.getMinutes());
+            } else {
+                nextValue.setHours(base.getHours());
+                nextValue.setMinutes(base.getMinutes());
+            }
             nextValue.setSeconds(0);
             setDraftDate(nextValue);
             setPickerMode('time');
@@ -70,8 +87,14 @@ const DirectPicker = ({label = 'Дата и время', value, onChange}: Direc
         const current = draftDate ?? new Date();
         nextValue.setFullYear(current.getFullYear(), current.getMonth(), current.getDate());
         nextValue.setSeconds(0);
-        setDate(nextValue);
-        onChange(nextValue);
+        if (nextValue.getTime() < minDate.getTime()) {
+            // enforce minimum
+            setDate(minDate);
+            onChange(minDate);
+        } else {
+            setDate(nextValue);
+            onChange(nextValue);
+        }
         setShow(false);
         setPickerMode(null);
     };
@@ -96,6 +119,7 @@ const DirectPicker = ({label = 'Дата и время', value, onChange}: Direc
                     display="default"
                     locale="ru-RU"
                     onChange={onPickerChange}
+                    minimumDate={new Date(Date.now() + 6 * 60 * 60 * 1000)}
                 />
             )}
         </View>

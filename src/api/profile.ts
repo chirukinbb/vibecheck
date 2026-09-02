@@ -31,10 +31,11 @@ export const createProfileFormData = (data: ProfileUpdateDTO): FormData => {
 };
 
 /** PATCH /api/v1/profile — обновить профиль */
-export function updateProfile(dto: ProfileUpdateDTO): Promise<Profile> {
-  return apiClient.patch<Profile>('/profile', createProfileFormData(dto), {
+export async function updateProfile(dto: ProfileUpdateDTO): Promise<Profile> {
+  const res = await apiClient.patch('/profile', createProfileFormData(dto), {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
-  }).then((r) => r.data);
+  });
+  return res.data.data as Profile;
 }
