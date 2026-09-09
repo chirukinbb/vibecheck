@@ -5,14 +5,12 @@ import {create} from 'zustand';
 import {
   createEvent,
   deleteEvent,
-  getAttendingEvents,
   getEvent,
   getEvents,
-  getOrganizingEvents,
   submitMemberFeedback,
   subscribeToEvent,
   unsubscribeFromEvent,
-  updateEvent,
+  updateEvent
 } from '../api/events';
 import type {CreateEventDTO, Event, EventListItem, MemberFeedbackDTO, PaginationMeta, UpdateEventDTO} from '../types';
 
@@ -57,6 +55,7 @@ export function formatEventPayload(dto: Partial<CreateEventDTO> & Record<string,
 }
 
 interface EventsState {
+  screen: '' | 'organizing' | 'attending'
   // ─── Список ───
   events: EventListItem[];
   meta: PaginationMeta | null;
@@ -71,6 +70,7 @@ interface EventsState {
   error: string | null;
 
   // ─── Действия: список ───
+  setScreen: (screen: '' | 'organizing' | 'attending') => void;
   fetchEvents: (page?: number) => Promise<void>;
   fetchOrganizingEvents: (page?: number) => Promise<void>;
   fetchAttendingEvents: (page?: number) => Promise<void>;
@@ -93,6 +93,7 @@ interface EventsState {
 }
 
 export const useEventsStore = create<EventsState>((set, get) => ({
+  screen: '',
   events: [],
   meta: null,
   selectedEvent: null,
@@ -103,11 +104,26 @@ export const useEventsStore = create<EventsState>((set, get) => ({
 
   // ─── Список ──────────────────────────────────────────────────────
 
-  fetchEvents: async (page = 1) => {
+  setScreen: (screen) => {
+    set({screen});
+  },
+
+  fetchEvents: async (page) => {
+    const currentMeta = get().meta;
+    const resolvedPage = page ?? (currentMeta ? currentMeta.current_page + 1 : 1);
+    const activeScreen = get().screen;
+
+    if (page === 1) {
+      set({events: [], meta: null});
+    }
+
     set({isLoadingList: true, error: null});
     try {
-      const res = await getEvents({page});
-      set({events: res.data, meta: res.meta});
+      const res = await getEvents(activeScreen, {page: resolvedPage});
+      set({
+        events: page === 1 ? res.data : page === undefined ? [...get().events, ...res.data] : res.data,
+        meta: res.meta,
+      });
     } catch (e: any) {
       set({error: e?.message ?? 'Ошибка загрузки событий'});
     } finally {
@@ -115,28 +131,14 @@ export const useEventsStore = create<EventsState>((set, get) => ({
     }
   },
 
-  fetchOrganizingEvents: async (page = 1) => {
-    set({isLoadingList: true, error: null});
-    try {
-      const res = await getOrganizingEvents({page});
-      set({events: res.data, meta: res.meta});
-    } catch (e: any) {
-      set({error: e?.message ?? 'Ошибка загрузки событий'});
-    } finally {
-      set({isLoadingList: false});
-    }
+  fetchOrganizingEvents: async (page) => {
+    set({screen: 'organizing'});
+    await get().fetchEvents(page);
   },
 
-  fetchAttendingEvents: async (page = 1) => {
-    set({isLoadingList: true, error: null});
-    try {
-      const res = await getAttendingEvents({page});
-      set({events: res.data, meta: res.meta});
-    } catch (e: any) {
-      set({error: e?.message ?? 'Ошибка загрузки событий'});
-    } finally {
-      set({isLoadingList: false});
-    }
+  fetchAttendingEvents: async (page) => {
+    set({screen: 'attending'});
+    await get().fetchEvents(page);
   },
 
   refreshEvents: async () => {
@@ -144,14 +146,16 @@ export const useEventsStore = create<EventsState>((set, get) => ({
   },
 
   fetchNextPage: async () => {
-    const {meta, isLoadingList, events} = get();
+    const {meta, isLoadingList, events, screen} = get();
     if (isLoadingList || !meta) return;
+    if (meta.current_page >= meta.last_page) return;
+
     const nextPage = meta.current_page + 1;
     if (nextPage > meta.last_page) return;
 
     set({isLoadingList: true});
     try {
-      const res = await getEvents({page: nextPage});
+      const res = await getEvents(screen, {page: nextPage});
       set({
         events: [...events, ...res.data],
         meta: res.meta,

@@ -1,13 +1,17 @@
 // src/app/(auth)/login.tsx — экран входа / регистрации
 import {router} from 'expo-router';
 import {useState} from 'react';
-import {KeyboardAvoidingView, Linking, Platform, StyleSheet, View} from 'react-native';
+import {KeyboardAvoidingView, Platform, StyleSheet, View} from 'react-native';
 import {Button, Divider, SegmentedButtons, Surface, Text, TextInput, useTheme,} from 'react-native-paper';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {loginWithEmail, loginWithOAuth, registerWithEmail} from '@/api/auth';
 import {API_URL} from '@/api/client';
 import {Spacing} from '@/constants/theme';
+import * as WebBrowser from 'expo-web-browser';
+
+// Ensure auth session is completed correctly on Android when returning from browser
+WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const theme = useTheme();
@@ -132,7 +136,18 @@ export default function LoginScreen() {
   const handleGoogleLogin = async () => {
     try {
       const oauthUrl = await loginWithOAuth('google');
-      Linking.openURL(oauthUrl);
+
+      // Use Expo WebBrowser auth session so the browser tab/Custom Tab
+      // closes automatically when the app receives the deep link.
+      const result = await WebBrowser.openAuthSessionAsync(
+          oauthUrl,
+          'events://auth-callback'
+      );
+
+      if (result.type === 'success' && result.url) {
+        // Optionally parse result.url here if you want to extract token
+        // otherwise the deep link handler in the app will pick up the redirect.
+      }
     } catch (error) {
       console.error('OAuth failed:', error);
     }

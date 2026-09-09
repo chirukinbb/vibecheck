@@ -1,9 +1,8 @@
 // src/app/(tabs)/_layout.tsx
-import {Tabs} from 'expo-router';
-import {CommonActions} from '@react-navigation/native';
-import {BottomNavigation, Icon} from 'react-native-paper';
 import {useAuthStore} from "@/stores";
+import {Tabs} from 'expo-router';
 import {useEffect} from "react";
+import {BottomNavigation, Icon} from 'react-native-paper';
 
 export default function TabsLayout() {
     const filter = useAuthStore((state) => state.filter);// Проверяем, пуст ли фильтр: объекта нет ИЛИ все его поля равны null/undefined
@@ -40,10 +39,7 @@ export default function TabsLayout() {
                         });
 
                         if (!event.defaultPrevented) {
-                            navigation.dispatch({
-                                ...CommonActions.navigate(route.name, route.params),
-                                target: state.key,
-                            });
+                            navigation.navigate(route.name, route.params);
                         }
                     }}
                     renderIcon={({route, focused, color}) => {

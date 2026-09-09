@@ -1,5 +1,6 @@
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
+import {setStatusBarStyle} from 'expo-status-bar';
 import {type ReactNode, useState} from 'react';
 import {Modal, Pressable, StyleSheet, Text, View} from 'react-native';
 import {Button, useTheme} from 'react-native-paper';
@@ -53,6 +54,9 @@ export default function ImagePickerWithCrop({
   const pickFromGallery = async () => {
     closeModal();
     try {
+      // Force status bar icons to light while native cropper UI is shown
+      setStatusBarStyle('light');
+
       const anyPicker = ImagePicker as any;
       const mediaEnum = anyPicker.MediaType ?? anyPicker.MediaTypeOptions ?? anyPicker.MediaTypes ?? undefined;
       const mediaTypes = mediaEnum ? (mediaEnum.Images ?? mediaEnum.IMAGE ?? mediaEnum.All ?? mediaEnum.ALL ?? mediaEnum) : undefined;
@@ -65,12 +69,18 @@ export default function ImagePickerWithCrop({
       await processResult(result);
     } catch (e) {
       console.warn('Gallery pick error:', e);
+    } finally {
+      // Restore status bar style according to current app theme
+      setStatusBarStyle(theme.dark ? 'light' : 'dark');
     }
   };
 
   const takePhoto = async () => {
     closeModal();
     try {
+      // Force status bar icons to light while native cropper UI is shown
+      setStatusBarStyle('light');
+
       const anyPicker = ImagePicker as any;
       const mediaEnum = anyPicker.MediaType ?? anyPicker.MediaTypeOptions ?? anyPicker.MediaTypes ?? undefined;
       const mediaTypes = mediaEnum ? (mediaEnum.Images ?? mediaEnum.IMAGE ?? mediaEnum.All ?? mediaEnum.ALL ?? mediaEnum) : undefined;
@@ -83,6 +93,9 @@ export default function ImagePickerWithCrop({
       await processResult(result);
     } catch (e) {
       console.warn('Camera pick error:', e);
+    } finally {
+      // Restore status bar style according to current app theme
+      setStatusBarStyle(theme.dark ? 'light' : 'dark');
     }
   };
 

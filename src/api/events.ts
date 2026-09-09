@@ -15,11 +15,11 @@ import {apiClient} from './client';
 // ─── Список событий ──────────────────────────────────────────────────
 
 /** GET /api/v1/events — список событий с пагинацией (сокращённый вид) */
-export function getEvents(params?: {
+export function getEvents(screen: string, params?: {
     page?: number;
     per_page?: number;
 }): Promise<PaginatedResponse<EventListItem>> {
-    return apiClient.get<PaginatedResponse<EventListItem>>('/events', {params}).then((r) => r.data);
+    return apiClient.get<PaginatedResponse<EventListItem>>('/events/' + screen, {params}).then((r) => r.data);
 }
 
 export function getOrganizingEvents(params?: {
