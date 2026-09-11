@@ -3,31 +3,40 @@ import {router, useLocalSearchParams} from 'expo-router';
 import {useEffect, useState} from 'react';
 import {Image, ScrollView, StyleSheet, View} from 'react-native';
 import {
-  ActivityIndicator,
-  Avatar,
-  Button,
-  Card,
-  Chip,
-  Modal,
-  Portal,
-  ProgressBar,
-  Surface,
-  Text,
-  useTheme,
+    ActivityIndicator,
+    Avatar,
+    Button,
+    Card,
+    Chip,
+    Modal,
+    Portal,
+    ProgressBar,
+    Surface,
+    Text,
+    useTheme,
 } from 'react-native-paper';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
+import {getAddressFromCoordinates, getStaticMapUrl} from '@/api';
 import PageLayout from '@/components/page-layout';
 import {formatDate} from '@/constants/mock-data';
 import {MaxContentWidth, Spacing} from '@/constants/theme';
 import {useEventsStore} from '@/stores';
-import {getAddressFromCoordinates, getStaticMapUrl} from '@/api'
 
 export default function EventDetailScreen() {
   const {id} = useLocalSearchParams<{ id: string }>();
   const theme = useTheme();
-  const insets = useSafeAreaInsets();
-  const {selectedEvent, isLoadingSingle, error, fetchEvent, clearSelected, subscribe, unsubscribe} = useEventsStore();
+    const insets = useSafeAreaInsets();
+    const {
+        selectedEvent,
+        isLoadingSingle,
+        isMutating,
+        error,
+        fetchEvent,
+        clearSelected,
+        subscribe,
+        unsubscribe
+    } = useEventsStore();
 
   const [addressName, setAddressName] = useState<string>('Определение адреса…');
   const [mapVisible, setMapVisible] = useState(false);
@@ -347,20 +356,29 @@ export default function EventDetailScreen() {
                     },
                   ]}
               >
-                <Button
-                    mode={event.member ? 'outlined' : 'contained'}
-                    onPress={() => {
-                      if (event.member) {
-                        unsubscribe(event.id).then(r => console.log(r));
-                      } else {
-                        subscribe(event.id).then(r => console.log(r));
-                      }
-                    }}
-                    disabled={!event.member && isFull}
-                    style={styles.bottomButton}
-                >
-                  {event.member ? 'Отписаться' : isFull ? 'Мест нет' : 'Записаться'}
-                </Button>
+                  <Button
+                      mode={event.member ? 'outlined' : 'contained'}
+                      onPress={async () => {
+                          if (event.member) {
+                              await unsubscribe(event.id);
+                          } else {
+                              await subscribe(event.id);
+                          }
+                      }}
+                      loading={isMutating}
+                      disabled={isMutating || (!event.member && isFull)}
+                      style={styles.bottomButton}
+                  >
+                      {isMutating
+                          ? event.member
+                              ? 'Отписываем…'
+                              : 'Записываем…'
+                          : event.member
+                              ? 'Отписаться'
+                              : isFull
+                                  ? 'Мест нет'
+                                  : 'Записаться'}
+                  </Button>
               </Surface>
           )}
         </View>

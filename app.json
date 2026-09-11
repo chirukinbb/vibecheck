@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "com.chirukinbb.events",
-      "icon": "./assets/expo.icon",
+      "icon": "./assets/images/VibeCheck-logo-icon.png",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "App needs location access to find events near you"
       }
