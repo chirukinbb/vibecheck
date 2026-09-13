@@ -209,21 +209,134 @@ export const MOCK_FILTER: GeoFilter = {
 // ─── Ответ /me ────────────────────────────────────────────────────────
 
 export const MOCK_AUTH_RESPONSE: MeResponse = {
-  name: 'Богдан',
-  profile: MOCK_PROFILE,
-  filter: MOCK_FILTER,
-  has_feedback: false,
+    name: 'Богдан',
+    profile: MOCK_PROFILE,
+    filter: MOCK_FILTER,
+    has_feedback: false,
+};
+
+// ─── Чат события ───────────────────────────────────────────────────────
+
+export const MOCK_CHAT_MESSAGES = [
+    {
+        id: 1,
+        content: 'Привет! Кто ещё поедет на йогу на крыше сегодня вечером?',
+        author: {
+            id: 1,
+            profile: {
+                name: 'Богдан',
+                avatar_url: null,
+                languages: ['ru', 'en'],
+                bio: 'Люблю активный отдых и технологии.',
+            },
+        },
+        created_at: 1726144200,
+    },
+    {
+        id: 2,
+        content: 'Я уже записался. Возьму коврик и воду, если понадобится.',
+        author: {
+            id: 2,
+            profile: {
+                name: 'Марина',
+                avatar_url: null,
+                languages: ['ru'],
+                bio: 'Танцую и люблю природу.',
+            },
+        },
+        created_at: 1726144320,
+    },
+    {
+        id: 3,
+        content: 'Отлично! Я приду на 15 минут раньше, чтобы помочь с рассадкой.',
+        author: {
+            id: 3,
+            profile: {
+                name: 'Дмитрий',
+                avatar_url: null,
+                languages: ['ru', 'en'],
+                bio: 'Организатор и любитель активностей.',
+            },
+        },
+        created_at: 1726144410,
+    },
+    {
+        id: 4,
+        content: 'Спасибо! Тогда встречаемся у входа в башню. Лучше не опаздывать.',
+        author: {
+            id: 1,
+            profile: {
+                name: 'Богдан',
+                avatar_url: null,
+                languages: ['ru', 'en'],
+                bio: 'Люблю активный отдых и технологии.',
+            },
+        },
+        created_at: 1726144520,
+    },
+    {
+        id: 5,
+        content: 'Небо обещает красивый закат. Будет здорово провести время вместе!',
+        author: {
+            id: 4,
+            profile: {
+                name: 'Алина',
+                avatar_url: null,
+                languages: ['ru', 'fr'],
+                bio: 'Фотограф и любитель красивых моментов.',
+            },
+        },
+        created_at: 1726144620,
+    },
+    {
+        id: 6,
+        content: 'Кто возьмёт пледы? Я могу принести два, если нужно.',
+        author: {
+            id: 2,
+            profile: {
+                name: 'Марина',
+                avatar_url: null,
+                languages: ['ru'],
+                bio: 'Танцую и люблю природу.',
+            },
+        },
+        created_at: 1726144740,
+    },
+];
+
+export const MOCK_CHAT_RESPONSE = {
+    data: MOCK_CHAT_MESSAGES,
+    links: {
+        first: 'https://example.com/api/v1/chat/1?page=1',
+        last: 'https://example.com/api/v1/chat/1?page=1',
+        prev: null,
+        next: null,
+    },
+    meta: {
+        current_page: 1,
+        from: 1,
+        last_page: 1,
+        links: [
+            {url: null, label: '&laquo; Previous', active: false},
+            {url: 'https://example.com/api/v1/chat/1?page=1', label: '1', active: true},
+            {url: null, label: 'Next &raquo;', active: false},
+        ],
+        path: 'https://example.com/api/v1/chat/1',
+        per_page: 15,
+        to: 6,
+        total: 6,
+    },
 };
 
 // ─── Языки (для профиля) ─────────────────────────────────────────────
 
 export const AVAILABLE_LANGUAGES: { code: string; label: string }[] = [
-  {code: 'ru', label: 'Русский'},
-  {code: 'en', label: 'English'},
-  {code: 'es', label: 'Español'},
-  {code: 'fr', label: 'Français'},
-  {code: 'de', label: 'Deutsch'},
-  {code: 'zh', label: '中文'},
+    {code: 'ru', label: 'Русский'},
+    {code: 'en', label: 'English'},
+    {code: 'es', label: 'Español'},
+    {code: 'fr', label: 'Français'},
+    {code: 'de', label: 'Deutsch'},
+    {code: 'zh', label: '中文'},
 ];
 
 // ─── Хелперы ──────────────────────────────────────────────────────────

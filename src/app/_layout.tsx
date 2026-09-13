@@ -1,10 +1,9 @@
 // src/app/_layout.tsx — корневой layout: PaperProvider + Stack
-import Constants, {AppOwnership} from 'expo-constants';
 import {router, Stack} from 'expo-router';
+import {StatusBar} from 'expo-status-bar';
 import {useEffect} from 'react';
 import {Linking, useColorScheme} from 'react-native';
 import {PaperProvider} from 'react-native-paper';
-import {StatusBar} from 'expo-status-bar';
 
 import {useAuthStore} from '@/stores/authStore';
 import {useSettingsStore} from '@/stores/settingsStore';
@@ -53,61 +52,61 @@ export default function RootLayout() {
         let isMounted = true;
 
         // 1. Асинхронная инициализация Push-уведомлений
-        const setupNotifications = async () => {
-            // Если это Expo Go — мгновенно выходим, НЕ импортируя модуль
-            if (isExpoGo) return;
-
-            // Импорт выполняется строго после проверки окружения
-            const Notifications = await import('expo-notifications');
-
-            if (!isMounted) return;
-
-            Notifications.setNotificationHandler({
-                handleNotification: async (notification) => {
-                    const route = getNotificationRoute(notification.request.content.data);
-                    return {
-                        shouldShowBanner: true,
-                        shouldShowList: true,
-                        shouldPlaySound: true,
-                        shouldSetBadge: false,
-                        priority: Notifications.AndroidNotificationPriority.MAX,
-                        ...(route ? {triggerId: String(Date.now())} : {}),
-                    };
-                },
-            });
-
-            const isPushNotificationTarget = (response: any) => {
-                if (!response) return false;
-
-                const raw = response.notification.request.content.data;
-                const parsed = typeof raw === 'string' ? (() => {
-                    try {
-                        return JSON.parse(raw);
-                    } catch {
-                        return raw;
-                    }
-                })() : raw;
-
-                const route = getNotificationRoute(parsed);
-                if (!route) return false;
-
-                router.push(route);
-                return true;
-            };
-
-            const lastResponse = await Notifications.getLastNotificationResponseAsync();
-            if (lastResponse && isMounted) {
-                isPushNotificationTarget(lastResponse);
-            }
-
-            if (isMounted) {
-                responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
-                    isPushNotificationTarget(response);
-                });
-            }
-        };
-
-        void setupNotifications();
+        // const setupNotifications = async () => {
+        //     // Если это Expo Go — мгновенно выходим, НЕ импортируя модуль
+        //     if (isExpoGo) return;
+        //
+        //     // Импорт выполняется строго после проверки окружения
+        //     const Notifications = await import('expo-notifications');
+        //
+        //     if (!isMounted) return;
+        //
+        //     Notifications.setNotificationHandler({
+        //         handleNotification: async (notification) => {
+        //             const route = getNotificationRoute(notification.request.content.data);
+        //             return {
+        //                 shouldShowBanner: true,
+        //                 shouldShowList: true,
+        //                 shouldPlaySound: true,
+        //                 shouldSetBadge: false,
+        //                 priority: Notifications.AndroidNotificationPriority.MAX,
+        //                 ...(route ? {triggerId: String(Date.now())} : {}),
+        //             };
+        //         },
+        //     });
+        //
+        //     const isPushNotificationTarget = (response: any) => {
+        //         if (!response) return false;
+        //
+        //         const raw = response.notification.request.content.data;
+        //         const parsed = typeof raw === 'string' ? (() => {
+        //             try {
+        //                 return JSON.parse(raw);
+        //             } catch {
+        //                 return raw;
+        //             }
+        //         })() : raw;
+        //
+        //         const route = getNotificationRoute(parsed);
+        //         if (!route) return false;
+        //
+        //         router.push(route);
+        //         return true;
+        //     };
+        //
+        //     const lastResponse = await Notifications.getLastNotificationResponseAsync();
+        //     if (lastResponse && isMounted) {
+        //         isPushNotificationTarget(lastResponse);
+        //     }
+        //
+        //     if (isMounted) {
+        //         responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
+        //             isPushNotificationTarget(response);
+        //         });
+        //     }
+        // };
+        //
+        // void setupNotifications();
 
         // 2. Логика обработки Deep Link (Работает всегда, включая Expo Go)
         const handleDeepLink = async (url: string | null) => {
@@ -156,6 +155,7 @@ export default function RootLayout() {
                 <Stack.Screen name="(auth)"/>
                 <Stack.Screen name="(tabs)"/>
                 <Stack.Screen name="event/[id]"/>
+                <Stack.Screen name="event/chat/[id]"/>
             </Stack>
         </PaperProvider>
     );

@@ -3,17 +3,17 @@ import {router, useLocalSearchParams} from 'expo-router';
 import {useEffect, useState} from 'react';
 import {Image, ScrollView, StyleSheet, View} from 'react-native';
 import {
-    ActivityIndicator,
-    Avatar,
-    Button,
-    Card,
-    Chip,
-    Modal,
-    Portal,
-    ProgressBar,
-    Surface,
-    Text,
-    useTheme,
+  ActivityIndicator,
+  Avatar,
+  Button,
+  Card,
+  Chip,
+  Modal,
+  Portal,
+  ProgressBar,
+  Surface,
+  Text,
+  useTheme,
 } from 'react-native-paper';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
@@ -26,17 +26,17 @@ import {useEventsStore} from '@/stores';
 export default function EventDetailScreen() {
   const {id} = useLocalSearchParams<{ id: string }>();
   const theme = useTheme();
-    const insets = useSafeAreaInsets();
-    const {
-        selectedEvent,
-        isLoadingSingle,
-        isMutating,
-        error,
-        fetchEvent,
-        clearSelected,
-        subscribe,
-        unsubscribe
-    } = useEventsStore();
+  const insets = useSafeAreaInsets();
+  const {
+    selectedEvent,
+    isLoadingSingle,
+    isMutating,
+    error,
+    fetchEvent,
+    clearSelected,
+    subscribe,
+    unsubscribe
+  } = useEventsStore();
 
   const [addressName, setAddressName] = useState<string>('Определение адреса…');
   const [mapVisible, setMapVisible] = useState(false);
@@ -300,100 +300,99 @@ export default function EventDetailScreen() {
             </Portal>
           </ScrollView>
 
-          {Array.isArray(event.members) ? (
-              <Surface
-                  elevation={2}
-                  style={[
-                    styles.footer,
-                    {
-                      paddingBottom: insets.bottom || Spacing.three,
-                      backgroundColor: theme.colors.elevation.level2,
-                      borderTopColor: theme.colors.outlineVariant,
-                    },
-                  ]}
-              >
-                <View style={styles.organizerActions}>
+          {/* НИЖНЯЯ ПАНЕЛЬ С КНОПКАМИ */}
+          <Surface
+              elevation={2}
+              style={[
+                styles.footer,
+                {
+                  paddingBottom: insets.bottom || Spacing.three,
+                  backgroundColor: theme.colors.elevation.level2,
+                  borderTopColor: theme.colors.outlineVariant,
+                },
+              ]}
+          >
+            {Array.isArray(event.members) ? (
+                /* --- Режим организатора --- */
+                <View style={styles.actionRow}>
                   <Button
                       mode="outlined"
                       icon="pencil"
                       onPress={() => router.push(`/event/edit/${event.id}`)}
-                      style={styles.organizerButton}
+                      style={styles.flexButton}
                       compact
                   >
                     Изменить
                   </Button>
 
                   <Button
-                      mode="outlined"
-                      icon="account-group"
-                      onPress={() => router.push(`/event/members/${event.id}`)}
-                      style={styles.organizerButton}
+                      mode="contained"
+                      icon="chat"
+                      onPress={() => router.push(`/event/chat/${event.id}`)}
+                      style={styles.flexButton}
                       compact
                   >
-                    Участники ({event.reserved ?? event.members.length})
+                    Чат
+                  </Button>
+                </View>
+            ) : event.member ? (
+                /* --- Режим участника (подписан на ивент) --- */
+                <View style={styles.actionRow}>
+                  <Button
+                      mode="outlined"
+                      onPress={async () => {
+                        await unsubscribe(event.id);
+                      }}
+                      loading={isMutating}
+                      disabled={isMutating}
+                      style={styles.flexButton}
+                      compact
+                  >
+                    {isMutating ? 'Отписываем…' : 'Отписаться'}
                   </Button>
 
                   <Button
                       mode="contained"
                       icon="chat"
                       onPress={() => router.push(`/event/chat/${event.id}`)}
-                      style={styles.organizerButton}
+                      style={styles.flexButton}
                       compact
                   >
                     Чат
                   </Button>
                 </View>
-              </Surface>
-          ) : (
-              <Surface
-                  elevation={2}
-                  style={[
-                    styles.footer,
-                    {
-                      paddingBottom: insets.bottom || Spacing.three,
-                      backgroundColor: theme.colors.elevation.level2,
-                      borderTopColor: theme.colors.outlineVariant,
-                    },
-                  ]}
-              >
-                  <Button
-                      mode={event.member ? 'outlined' : 'contained'}
-                      onPress={async () => {
-                          if (event.member) {
-                              await unsubscribe(event.id);
-                          } else {
-                              await subscribe(event.id);
-                          }
-                      }}
-                      loading={isMutating}
-                      disabled={isMutating || (!event.member && isFull)}
-                      style={styles.bottomButton}
-                  >
-                      {isMutating
-                          ? event.member
-                              ? 'Отписываем…'
-                              : 'Записываем…'
-                          : event.member
-                              ? 'Отписаться'
-                              : isFull
-                                  ? 'Мест нет'
-                                  : 'Записаться'}
-                  </Button>
-              </Surface>
-          )}
+            ) : (
+                /* --- Режим гостя (не подписан) --- */
+                <Button
+                    mode="contained"
+                    onPress={async () => {
+                      await subscribe(event.id);
+                    }}
+                    loading={isMutating}
+                    disabled={isMutating || isFull}
+                    style={styles.bottomButton}
+                >
+                  {isMutating
+                      ? 'Записываем…'
+                      : isFull
+                          ? 'Мест нет'
+                          : 'Записаться'}
+                </Button>
+            )}
+          </Surface>
         </View>
       </PageLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  organizerActions: {
+  actionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: Spacing.one,
+    gap: Spacing.two,
   },
-  organizerButton: {
+  flexButton: {
     flex: 1,
   },
   centered: {flex: 1, justifyContent: 'center', alignItems: 'center'},

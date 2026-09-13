@@ -65,7 +65,7 @@ export default function TabsLayout() {
                 options={{
                     tabBarLabel: 'События',
                     tabBarIcon: ({color, size}) => (
-                        <Icon source="calendar-text" size={size} color={isFilterEmpty ? disableColor : color}/>
+                        <Icon source="calendar-text" size={size} color={isFilterEmpty ? disableColor : String(color)}/>
                     ),
                 }}
             />
@@ -74,7 +74,8 @@ export default function TabsLayout() {
                 options={{
                     tabBarLabel: 'Создать',
                     tabBarIcon: ({color, size}) => (
-                        <Icon source="plus-circle-outline" size={size} color={isFilterEmpty ? disableColor : color}/>
+                        <Icon source="plus-circle-outline" size={size}
+                              color={isFilterEmpty ? disableColor : String(color)}/>
                     ),
                 }}
             />
@@ -83,7 +84,7 @@ export default function TabsLayout() {
                 options={{
                     tabBarLabel: 'Профиль',
                     tabBarIcon: ({color, size}) => (
-                        <Icon source="account-outline" size={size} color={color}/>
+                        <Icon source="account-outline" size={size} color={String(color)}/>
                     ),
                 }}
             />

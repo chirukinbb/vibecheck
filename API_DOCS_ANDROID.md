@@ -289,30 +289,53 @@ Authorization: Bearer 1|abc123def456...
 {
     "data": [
         {
-            "id": 1,
-            "title": "Название события",
-            "thumbnail_url": "http://<HOST>:8080/storage/thumbnails/xxx.webp",
-            "category": "Спорт",
-            "description": "Описание события",
-            "slots": 10,
-            "reserved": 3,
-            "planing_time": 1720000000
+          "id": 1,
+          "title": "Название события",
+          "thumbnail_url": "http://<HOST>:8080/storage/thumbnails/xxx.webp",
+          "category": "Спорт",
+          "description": "Описание события",
+          "slots": 10,
+          "reserved": 3,
+          "planing_time": 1720000000
         }
     ],
-    "links": {
-        "first": "http://<HOST>:8080/api/v1/events?page=1",
-        "last": "http://<HOST>:8080/api/v1/events?page=1",
-        "prev": null,
-        "next": null
-    },
-    "meta": {
-        "current_page": 1,
-        "from": 1,
-        "last_page": 1,
-        "per_page": 15,
-        "to": 3,
-        "total": 3
-    }
+  "links": {
+    "first": "https://example.com/api/events?page=1",
+    "last": "https://example.com/api/events?page=5",
+    "prev": null,
+    "next": "https://example.com/api/events?page=2"
+  },
+  "meta": {
+    "current_page": 1,
+    "from": 1,
+    "last_page": 5,
+    "links": [
+      {
+        "url": null,
+        "label": "&laquo; Previous",
+        "active": false
+      },
+      {
+        "url": "https://example.com/api/events?page=1",
+        "label": "1",
+        "active": true
+      },
+      {
+        "url": "https://example.com/api/events?page=2",
+        "label": "2",
+        "active": false
+      },
+      {
+        "url": "https://example.com/api/events?page=2",
+        "label": "Next &raquo;",
+        "active": false
+      }
+    ],
+    "path": "https://example.com/api/events",
+    "per_page": 15,
+    "to": 15,
+    "total": 75
+  }
 }
 ```
 
@@ -332,6 +355,7 @@ Authorization: Bearer 1|abc123def456...
       "planing_time": 1720000000,
       "slots": 10,
       "reserved": 3,
+      "chat_id": 1,
       "author": {
         "name": "John Doe",
         "avatar_url": null,
@@ -341,7 +365,7 @@ Authorization: Bearer 1|abc123def456...
         ],
         "bio": "О себе"
       },
-      "member": null,
+      "member": 3,
       "members": [
         {
           "id": 7,
@@ -367,9 +391,37 @@ Authorization: Bearer 1|abc123def456...
 
 ```json
 {
-    "message": "Event created successfully"
+  "message": "Event created successfully"
 }
 ```
+
+### Сообщение чата — `GET /api/v1/chat/{chat}/message/{message}`
+
+```json
+{
+  "data": {
+    "id": 1,
+    "content": "Привет, кто идёт?",
+    "author": {
+      "id": 7,
+      "profile": {
+        "name": "John Doe",
+        "avatar_url": null,
+        "languages": [
+          "en",
+          "ru"
+        ],
+        "bio": "О себе"
+      }
+    },
+    "created_at": 1720000000
+  }
+}
+```
+
+> 📌 `created_at` отдаётся как Unix timestamp (секунды). Поля `created_at`/`updated_at` скрыты на уровне модели,
+> но `created_at` добавляется ресурсом явно в виде timestamp. `author.id` = `user_id` автора сообщения. Список сообщений
+> (`GET /api/v1/chat/{chat}`) возвращает `{"data":[...]}` из таких же объектов.
 
 ---
 
@@ -582,8 +634,50 @@ Laravel возвращает ошибки валидации в формате:
 
 **Middleware**: ReservableMiddleware — проверяет `slots > members.count()`
 
-> ⚠️ Роут вложен в группу `EventOwnerMiddleware` (см. [известные проблемы](#примечания-и-известные-проблемы)).
-
+```json
+{
+  "data": {
+    "id": 1,
+    "title": "...",
+    "category": "Спорт",
+    "thumbnail_url": "...",
+    "description": "...",
+    "coordinate_lat": "55.7558",
+    "coordinate_lng": "37.6173",
+    "country": "Russia",
+    "planing_time": 1720000000,
+    "slots": 10,
+    "reserved": 3,
+    "author": {
+      "name": "John Doe",
+      "avatar_url": null,
+      "languages": [
+        "en",
+        "ru"
+      ],
+      "bio": "О себе"
+    },
+    "member": 3,
+    "members": [
+      {
+        "id": 7,
+        "profile": {
+          "name": "John Doe",
+          "avatar_url": null,
+          "languages": [
+            "en",
+            "ru"
+          ],
+          "bio": "О себе"
+        }
+      }
+    ],
+    "tags": [
+      "tag_name"
+    ]
+  }
+}
+```
 ---
 
 #### PATCH /api/v1/event/{event}/member/{member}
@@ -633,6 +727,50 @@ Laravel возвращает ошибки валидации в формате:
 
 **Middleware**: MemberMiddleware
 
+```json
+{
+  "data": {
+    "id": 1,
+    "title": "...",
+    "category": "Спорт",
+    "thumbnail_url": "...",
+    "description": "...",
+    "coordinate_lat": "55.7558",
+    "coordinate_lng": "37.6173",
+    "country": "Russia",
+    "planing_time": 1720000000,
+    "slots": 10,
+    "reserved": 3,
+    "author": {
+      "name": "John Doe",
+      "avatar_url": null,
+      "languages": [
+        "en",
+        "ru"
+      ],
+      "bio": "О себе"
+    },
+    "member": 3,
+    "members": [
+      {
+        "id": 7,
+        "profile": {
+          "name": "John Doe",
+          "avatar_url": null,
+          "languages": [
+            "en",
+            "ru"
+          ],
+          "bio": "О себе"
+        }
+      }
+    ],
+    "tags": [
+      "tag_name"
+    ]
+  }
+}
+```
 ---
 
 ### 3. Категории
@@ -856,6 +994,169 @@ Laravel возвращает ошибки валидации в формате:
 
 > ✅ Роут **исправлен**: возвращает `config('users.languages')` (полный список). Ранее был заглушкой.
 
+### 9. Чат (Chat)
+
+Модуль `Chat`. Для каждого события автоматически создаётся чат (связь `chatable` morph создаётся при создании события —
+см. `Event::created`). В ответе одиночного события теперь присутствует поле `chat_id`.
+
+Все эндпоинты чата требуют Bearer-токен (`auth:sanctum`) и доступны по пути `/api/v1/chat/{chat}`. Отдельные права
+(abilities) для чата не проверяются — доступ ограничивается мидлварями `EventMemberMiddleware` и
+`MessageAuthorMiddleware`.
+
+#### GET /api/v1/chat/{chat}
+
+**Назначение**: получить список сообщений чата.
+
+| Статус | Условие | Тело ответа |
+|--------|---------|------------|
+| **200** | Успех | `{"data":[...]}` — коллекция MessageResource |
+| **401** | Без токена | `{"message":"Unauthenticated."}` |
+| **403** | Не владелец и не участник события | Стандартный 403 |
+| **404** | Чат не найден | Стандартный 404 |
+
+**Middleware**: `EventMemberMiddleware` — доступ только владельцу события или его участнику.
+
+#### POST /api/v1/chat/{chat}
+
+**Назначение**: отправить сообщение в чат.
+
+Тело запроса:
+
+```json
+{
+  "content": "Привет, кто идёт?"
+}
+```
+
+| Статус | Условие | Тело ответа |
+|--------|---------|------------|
+| **200** | Сообщение создано | `true` (см. примечание ниже) |
+| **401** | Без токена | `{"message":"Unauthenticated."}` |
+| **403** | Не владелец и не участник | Стандартный 403 |
+| **404** | Чат не найден | Стандартный 404 |
+| **422** | Ошибка валидации | `{"message":"...","errors":{"content":["The content field is required."]}}` |
+
+**Валидация** (MessageRequest):
+
+| Поле | Правила |
+|------|---------|
+| `content` | required, string |
+
+**Middleware**: `EventMemberMiddleware`
+
+#### GET /api/v1/chat/{chat}/message/{message}
+
+**Назначение**: получить одно сообщение.
+
+| Статус | Условие | Тело ответа |
+|--------|---------|------------|
+| **200** | Успех | `{"data":{...}}` — MessageResource |
+| **401** | Без токена | `{"message":"Unauthenticated."}` |
+| **403** | Не автор сообщения | `{"message":"You are not authorized to access this resource"}` |
+
+**Middleware**: `MessageAuthorMiddleware` — только автор сообщения.
+
+MessageResource
+
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "content": "Привет, кто идёт?",
+      "author": {
+        "id": 7,
+        "profile": {
+          "name": "John Doe",
+          "avatar_url": null,
+          "languages": [
+            "en",
+            "ru"
+          ],
+          "bio": "О себе"
+        }
+      },
+      "created_at": 1720000000
+    }
+  ],
+  "links": {
+    "first": "https://example.com/api/events?page=1",
+    "last": "https://example.com/api/events?page=5",
+    "prev": null,
+    "next": "https://example.com/api/events?page=2"
+  },
+  "meta": {
+    "current_page": 1,
+    "from": 1,
+    "last_page": 5,
+    "links": [
+      {
+        "url": null,
+        "label": "&laquo; Previous",
+        "active": false
+      },
+      {
+        "url": "https://example.com/api/events?page=1",
+        "label": "1",
+        "active": true
+      },
+      {
+        "url": "https://example.com/api/events?page=2",
+        "label": "2",
+        "active": false
+      },
+      {
+        "url": "https://example.com/api/events?page=2",
+        "label": "Next &raquo;",
+        "active": false
+      }
+    ],
+    "path": "https://example.com/api/events",
+    "per_page": 15,
+    "to": 15,
+    "total": 75
+  }
+}
+```
+
+#### PATCH /api/v1/chat/{chat}/message/{message}
+
+**Назначение**: отредактировать сообщение.
+
+Тело запроса:
+
+```json
+{
+  "content": "Исправленный текст"
+}
+```
+
+| Статус | Условие | Тело ответа |
+|--------|---------|------------|
+| **200** | Обновлено | `true` (см. примечание ниже) |
+| **401** | Без токена | `{"message":"Unauthenticated."}` |
+| **403** | Не автор сообщения | `{"message":"You are not authorized to access this resource"}` |
+| **422** | Ошибка валидации | `{"message":"...","errors":{"content":["The content field is required."]}}` |
+
+**Валидация**: `content` — required, string.
+
+**Middleware**: `MessageAuthorMiddleware`
+
+#### DELETE /api/v1/chat/{chat}/message/{message}
+
+**Назначение**: удалить сообщение.
+
+| Статус | Условие | Тело ответа |
+|--------|---------|------------|
+| **200** | Удалено | `true` (см. примечание ниже) |
+| **401** | Без токена | `{"message":"Unauthenticated."}` |
+| **403** | Не автор сообщения | `{"message":"You are not authorized to access this resource"}` |
+
+**Middleware**: `MessageAuthorMiddleware`
+
+> ⚠️ **Примечание по ответам**: эндпоинты `POST`/`PATCH`/`DELETE` возвращают **голый `true`** (boolean), а не объект
+> `{"message":"..."}`, в отличие от остального API. Учитывайте это при парсинге ответов.
+
 ---
 
 ## Firebase Push-уведомления (FCM)
@@ -921,6 +1222,10 @@ ability** (Sanctum `CheckForAnyAbility`) | Проверка прав токен�
 EventOwnerMiddleware** | Только владелец события | 403 `{"message":"You are not authorized to access this event"}` |
 | 4 | **ReservableMiddleware** | Есть свободные места | 400 `{"message":"This event is not reservable"}` |
 | 5 | **MemberMiddleware** | Пользователь — участник | 403 `{"message":"You are not a member of this event"}` |
+| 6 | **
+EventMemberMiddleware** | Владелец события или его участник (для чата) | 403 (не владелец/участник) / 404 (чат не найден) |
+| 7 | **
+MessageAuthorMiddleware** | Только автор сообщения | 403 `{"message":"You are not authorized to access this resource"}` |
 
 > 📌 В API используется Sanctum-мидлварь `ability` (alias `ability`), а **не** Spatie `role.permission`. Последний (`CheckRolePermission`) применяется только в web/admin-роутах.
 
@@ -1095,6 +1400,27 @@ EventOwnerMiddleware** | Только владелец события | 403 `{"m
 | parent_comment_id | bigint (def: 0) |
 | content | text |
 
+### chats
+
+| Поле | Тип |
+|------|-----|
+| id | bigint PK |
+| chatable_id | bigint (morph id) |
+| chatable_type | string (morph type) |
+| created_at | timestamp |
+| updated_at | timestamp |
+
+### messages
+
+| Поле | Тип |
+|------|-----|
+| id | bigint PK |
+| content | text |
+| chat_id | bigint FK |
+| user_id | bigint FK |
+| created_at | timestamp |
+| updated_at | timestamp |
+
 ---
 
 ## Примечания и известные проблемы
@@ -1143,3 +1469,18 @@ EventOwnerMiddleware** | Только владелец события | 403 `{"m
    Socialite-объект) вместо профиля модели; обновление аватарки при OAuth не работает.
 10. **Автосоздание profile/filter** — хук `User::created()` привязан к модели `User` (web), а не к `UserAPI` (api). Для
     пользователей, созданных через API, `profile`/`filter` могут отсутствовать, что ломает `/me` и список событий.
+11. **`POST /api/v1/chat/{chat}` не сохраняет `user_id`** — `ChatsController::store()` создаёт сообщение только из
+    `$request->validated()` (поле `content`), а `user_id` автора не проставляется. В результате `user_id = null`, а
+    `MessageResource` (и уведомления) падают при обращении к `user->profile`.
+12. **`DELETE /api/v1/chat/{chat}/message/{message}` диспатчит `NewMessageJob`** вместо `DeleteMessageJob` — при
+    удалении сообщения отправляется push «New Message» вместо «удаление». `DeleteMessageJob` вообще не используется.
+13. **Конструкторы job'ов принимают `int $messageId`, но контроллер передаёт модель**
+    — `NewMessageJob::dispatch($message)`
+    и `UpdateMessageJob::dispatch($message)` передают объект `Message` в конструктор с типом `int`, что
+    вызовет `TypeError`
+    (следует передавать `$message->id` или убрать тип).
+14. **Классы уведомлений чата лежат не в своём namespace** — файлы в `Modules/Chat/app/Notifications/` объявлены с
+    namespace `Modules\Events\Notifications`, что не соответствует PSR-4 авто-загрузке модуля Chat. Push-уведомления о
+    новых сообщениях могут не отправляться.
+15. **`POST`/`PATCH`/`DELETE` в чате возвращают голый `true`** — несовместимо с общим форматом `{"message":"..."}`,
+    описанным в разделе «Формат ответов».
