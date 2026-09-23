@@ -46,3 +46,10 @@ export {
     getStaticMapUrl
 } from './geo';
 
+export {
+    deleteChatMessage,
+    getChatMessages,
+    sendChatMessage,
+    updateChatMessage,
+} from './chat';
+

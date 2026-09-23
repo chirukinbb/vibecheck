@@ -1,45 +1,14 @@
+import Constants from 'expo-constants';
 import {useLocalSearchParams, useRouter} from 'expo-router';
 import {useEffect, useRef, useState} from 'react';
-import {ActivityIndicator, Platform, StyleSheet, Text, View} from 'react-native';
+import {ActivityIndicator, StyleSheet, Text, View} from 'react-native';
 
+import {requestDeviceFirebaseToken} from '@/lib/notifications';
 import {useAuthStore} from '@/stores/authStore';
 import {useCategoriesStore} from '@/stores/categoriesStore';
 import {useDeviceStore} from '@/stores/deviceStore';
 import {useLanguagesStore} from '@/stores/languagesStore';
 import {useTagsStore} from '@/stores/tagsStore';
-
-async function requestDeviceFirebaseToken(): Promise<string | null> {
-    if (Platform.OS === 'web') {
-        return null;
-    }
-
-    try {
-        // Динамически подгружаем модуль только при вызове функции
-        const Notifications = await import('expo-notifications');
-
-        if (Platform.OS === 'android') {
-            await Notifications.setNotificationChannelAsync('high_importance', {
-                name: 'Важные уведомления',
-                importance: Notifications.AndroidImportance.MAX,
-                vibrationPattern: [0, 250, 250, 250],
-                enableVibrate: true,
-                showBadge: true,
-                lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-            });
-        }
-
-        const {status} = await Notifications.requestPermissionsAsync();
-        if (status !== 'granted') {
-            return null;
-        }
-
-        const token = (await Notifications.getDevicePushTokenAsync()).data;
-        return typeof token === 'string' && token.length > 0 ? token : null;
-    } catch {
-        // Если запуск происходит в Expo Go, импорт упадет в catch и мягко вернет null
-        return null;
-    }
-}
 
 export default function BootstrapScreen() {
     const {token} = useLocalSearchParams<{ token: string }>();
@@ -107,12 +76,15 @@ export default function BootstrapScreen() {
         void runBootstrap();
     }, [fetchCategories, fetchLanguages, loginWithToken, token, router]);
 
+    const appVersion = (Constants as any)?.manifest?.version ?? (Constants as any)?.expoConfig?.version ?? 'unknown';
+
     return (
         <View style={styles.container}>
             {loading ? (
                 <>
-                    <ActivityIndicator size="large" />
+                    <ActivityIndicator size="large"/>
                     <Text style={styles.title}>Подготовка аккаунта…</Text>
+                    <Text style={styles.subtitle}>Версия приложения: {appVersion}</Text>
                 </>
             ) : (
                 <Text style={styles.error}>{error ?? 'Ошибка загрузки'}</Text>

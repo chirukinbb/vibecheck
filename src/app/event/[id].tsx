@@ -124,7 +124,7 @@ export default function EventDetailScreen() {
           <ScrollView
               contentContainerStyle={[
                 styles.content,
-                {paddingBottom: Spacing.six + insets.bottom + 60},
+                {paddingBottom: Spacing.six + insets.bottom + 100},
               ]}
               showsVerticalScrollIndicator={false}
           >
@@ -306,7 +306,7 @@ export default function EventDetailScreen() {
               style={[
                 styles.footer,
                 {
-                  paddingBottom: insets.bottom || Spacing.three,
+                  paddingBottom: insets.bottom + Spacing.three,
                   backgroundColor: theme.colors.elevation.level2,
                   borderTopColor: theme.colors.outlineVariant,
                 },
@@ -354,7 +354,7 @@ export default function EventDetailScreen() {
                   <Button
                       mode="contained"
                       icon="chat"
-                      onPress={() => router.push(`/event/chat/${event.id}`)}
+                      onPress={() => router.push(`/event/chat/${event.chat_id}`)}
                       style={styles.flexButton}
                       compact
                   >

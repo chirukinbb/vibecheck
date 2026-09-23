@@ -2,7 +2,7 @@
   "expo": {
     "name": "VibeCheck",
     "slug": "vibecheck",
-    "version": "1.0.0",
+    "version": "1.0.4",
     "orientation": "portrait",
     "icon": "./assets/images/VibeCheck-logo-icon.png",
     "scheme": "events",
@@ -58,7 +58,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "9277cb11-f240-4c06-8ffd-e7ee568e71fd"
+        "projectId": "3a1983f2-bf21-491d-9fd1-370fe0bd49e4"
       }
     }
   }

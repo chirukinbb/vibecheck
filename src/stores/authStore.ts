@@ -1,6 +1,7 @@
 // src/stores/authStore.ts — авторизация: токен, профиль, фильтр
-import {create} from 'zustand';
 import {getCurrentUser} from '@/api';
+import * as SecureStore from 'expo-secure-store';
+import {create} from 'zustand';
 import {clearAuthToken as clearClientToken, setAuthToken} from '../api/client';
 import type {GeoFilter, Profile} from '../types';
 
@@ -52,6 +53,14 @@ export const useAuthStore = create<AuthState>((set) => ({
         isAuthenticated: true,
         isLoading: false,
       });
+      try {
+        await SecureStore.setItemAsync('auth_token', token);
+        if (user.profile) {
+          await SecureStore.setItemAsync('user_profile', JSON.stringify(user.profile));
+        }
+      } catch {
+        // ignore SecureStore errors — app still works in-memory
+      }
     } catch (error) {
       clearClientToken();
       set({
@@ -75,6 +84,14 @@ export const useAuthStore = create<AuthState>((set) => ({
       filter: null,
       isAuthenticated: false,
     });
+    void (async () => {
+      try {
+        await SecureStore.deleteItemAsync('auth_token');
+        await SecureStore.deleteItemAsync('user_profile');
+      } catch {
+        // ignore
+      }
+    })();
   },
 
   setProfile: (p) => set({profile: p}),

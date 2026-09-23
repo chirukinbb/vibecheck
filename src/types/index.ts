@@ -22,15 +22,23 @@ export type {
     Tag, UpdateEventDTO
 } from './event';
 
-export type { Category } from './category';
+export type {Category} from './category';
 
-export type { Member, MemberFeedbackDTO } from './member';
+export type {Member, MemberFeedbackDTO} from './member';
 
-export type { CreateFeedbackDTO } from './feedback';
+export type {
+    ChatAuthor,
+    ChatMessage,
+    ChatMessageDTO,
+    ChatMessageListResponse,
+    ChatMessageUpdateDTO,
+} from './chat';
 
-export type { DeviceTokenDTO } from './device';
+export type {CreateFeedbackDTO} from './feedback';
 
-export type { LanguagesResponse } from '../api/languages';
+export type {DeviceTokenDTO} from './device';
+
+export type {LanguagesResponse} from '../api/languages';
 
 export type {
     EventNotificationData,

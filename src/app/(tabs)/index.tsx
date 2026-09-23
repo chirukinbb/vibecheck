@@ -9,6 +9,7 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import PageLayout from '@/components/page-layout';
 import {formatDate} from '@/constants/mock-data';
 import {MaxContentWidth, Spacing} from '@/constants/theme';
+import {subscribeToEventListNotifications} from '@/lib/notifications';
 import {useAuthStore, useEventsStore} from '@/stores';
 
 // Проверяем, запущено ли приложение в Expo Go
@@ -83,32 +84,22 @@ export default function EventsListScreen() {
     let responseSubscription: any;
 
     const setupNotifications = async () => {
-      // 3. Динамически импортируем только когда уверены, что это Dev Build / Standalone
-      const Notifications = await import('expo-notifications');
-
       if (!isMounted) return;
 
-      const handleNotificationData = (data: { action?: string; screen?: string; event_id?: number } | undefined) => {
-        if (data?.screen === 'single_event' && typeof data.event_id === 'number') {
-          void router.push(`/event/${data.event_id}`);
-          return;
-        }
+      const cleanup = await subscribeToEventListNotifications(
+          (eventId) => {
+            void router.push(`/event/${eventId}`);
+          },
+          () => {
+            if (!hasPendingRefreshRef.current) {
+              hasPendingRefreshRef.current = true;
+              setHasPendingRefresh(true);
+            }
+          },
+      );
 
-        if (data?.action === 'refresh' && data?.screen === 'events' && !hasPendingRefreshRef.current) {
-          hasPendingRefreshRef.current = true;
-          setHasPendingRefresh(true);
-        }
-      };
-
-      receivedSubscription = Notifications.addNotificationReceivedListener((notification) => {
-        const data = notification.request.content.data as { action?: string; screen?: string; event_id?: number } | undefined;
-        handleNotificationData(data);
-      });
-
-      responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
-        const data = response.notification.request.content.data as { action?: string; screen?: string; event_id?: number } | undefined;
-        handleNotificationData(data);
-      });
+      receivedSubscription = cleanup;
+      responseSubscription = cleanup;
     };
 
     void setupNotifications();

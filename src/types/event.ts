@@ -49,6 +49,8 @@ export interface Event extends EventBase {
     address: string;
     /** Профиль автора */
     author: EventAuthor;
+    /** Чат события, если он уже создан */
+    chat_id?: number | null;
     /** Теги (если есть) — могут быть строками или объектами `{id,name}` */
     tags: Array<string | Tag>;
     /** Состоялось ли событие */

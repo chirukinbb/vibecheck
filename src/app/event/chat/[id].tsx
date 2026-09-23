@@ -1,5 +1,5 @@
 import {router, useLocalSearchParams} from 'expo-router';
-import {useCallback, useMemo, useState} from 'react';
+import {useCallback, useEffect, useMemo, useState} from 'react';
 import {
     Alert,
     Dimensions,
@@ -10,23 +10,23 @@ import {
     TouchableWithoutFeedback,
     View,
 } from 'react-native';
-import {Bubble, GiftedChat, type IMessage, InputToolbar, Send,} from 'react-native-gifted-chat';
+import {Bubble, GiftedChat, type IMessage, InputToolbar, Send} from 'react-native-gifted-chat';
 import {Text, useTheme} from 'react-native-paper';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import PageLayout from '@/components/page-layout';
-import {MOCK_CHAT_MESSAGES} from '@/constants/mock-data';
-import {Spacing} from '@/constants/theme'; // Подключаем константу Spacing[cite: 2, 3]
+import {Spacing} from '@/constants/theme';
+import {useEventsStore} from "@/stores";
+import {useChatStore} from '@/stores/chatStore';
 
-const CURRENT_USER_ID = 1;
 const {width: SCREEN_WIDTH} = Dimensions.get('window');
 const MAX_BUBBLE_WIDTH = SCREEN_WIDTH * 0.75;
 
-function mapMockMessages(): IMessage[] {
-    return MOCK_CHAT_MESSAGES.map((message) => ({
+function mapChatMessages(messages: ReturnType<typeof useChatStore.getState>['messages']): IMessage[] {
+    return messages.map((message) => ({
         _id: String(message.id),
         text: message.content,
-        createdAt: new Date(message.created_at * 1000),
+        createdAt: new Date(Number(message.created_at) * 1000),
         user: {
             _id: message.author.id,
             name: message.author.profile.name,
@@ -39,38 +39,54 @@ export default function EventChatScreen() {
     const {id} = useLocalSearchParams<{ id: string }>();
     const theme = useTheme();
     const insets = useSafeAreaInsets();
+    const {messages: chatMessages, fetchMessages, sendMessage, editMessage, deleteMessage} = useChatStore();
+    const {selectedEvent} = useEventsStore();
 
-    const [messages, setMessages] = useState<IMessage[]>(() => mapMockMessages());
+    // Заменяем useHeaderHeight(): базовый Header равен ~56px + верхний inset устройства
+    const headerHeight = 56 + insets.top;
+
     const [composerText, setComposerText] = useState('');
-    const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+    const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
 
-    const messageTitle = useMemo(() => `Чат события #${id ?? '...'}`, [id]);
+    const messages = useMemo(() => mapChatMessages(chatMessages), [chatMessages]);
+    const messageTitle = useMemo(() => `Чат события ${selectedEvent?.title ?? '...'}`, [selectedEvent?.title]);
+
+    useEffect(() => {
+        const eventId = Number(id);
+        if (!id || Number.isNaN(eventId)) return;
+
+        void fetchMessages(eventId, 1);
+    }, [fetchMessages, id]);
 
     const handleDeleteMessage = useCallback((messageId: string) => {
+        const eventId = Number(id);
+        if (!id || Number.isNaN(eventId)) return;
+
         Alert.alert('Удалить сообщение?', 'Это действие нельзя будет отменить.', [
             {text: 'Отмена', style: 'cancel'},
             {
                 text: 'Удалить',
                 style: 'destructive',
-                onPress: () => {
-                    setMessages((currentMessages) =>
-                        currentMessages.filter((message) => String(message._id) !== messageId),
-                    );
+                onPress: async () => {
+                    await deleteMessage(eventId, Number(messageId));
                 },
             },
         ]);
-    }, []);
+    }, [deleteMessage, id]);
 
     const handleEditMessage = useCallback((messageId: string) => {
-        const target = messages.find((message) => String(message._id) === messageId);
+        const target = chatMessages.find((message) => String(message.id) === messageId);
         if (!target) return;
 
-        setEditingMessageId(messageId);
-        setComposerText(target.text || '');
-    }, [messages]);
+        setEditingMessageId(Number(messageId));
+        setComposerText(target.content || '');
+    }, [chatMessages]);
 
     const handleLongPress = useCallback((context: unknown, message: IMessage) => {
-        if (message.user._id !== CURRENT_USER_ID) return;
+        if (message.user._id !== Number(id)) {
+            const currentUserId = Number(id);
+            if (currentUserId === 0) return;
+        }
 
         Alert.alert('Сообщение', '', [
             {
@@ -84,46 +100,32 @@ export default function EventChatScreen() {
             },
             {text: 'Отмена', style: 'cancel'},
         ]);
-    }, [handleDeleteMessage, handleEditMessage]);
+    }, [handleDeleteMessage, handleEditMessage, id]);
 
-    const handleSend = useCallback((newMessages: IMessage[] = []) => {
+    const handleSend = useCallback(async (newMessages: IMessage[] = []) => {
         const rawText = (newMessages[0]?.text ?? composerText).trim();
         if (!rawText) return;
 
-        if (editingMessageId) {
-            setMessages((currentMessages) =>
-                currentMessages.map((message) =>
-                    String(message._id) === editingMessageId
-                        ? {...message, text: rawText, createdAt: new Date()}
-                        : message,
-                ),
-            );
+        const eventId = Number(id);
+        if (!id || Number.isNaN(eventId)) return;
+
+        if (editingMessageId !== null) {
+            await editMessage(eventId, editingMessageId, {content: rawText});
             setEditingMessageId(null);
             setComposerText('');
             return;
         }
 
-        setMessages((currentMessages) => [
-            {
-                _id: String(Date.now()),
-                text: rawText,
-                createdAt: new Date(),
-                user: {
-                    _id: CURRENT_USER_ID,
-                    name: 'Вы',
-                },
-            },
-            ...currentMessages,
-        ]);
+        await sendMessage(eventId, {content: rawText});
         setComposerText('');
-    }, [composerText, editingMessageId]);
+    }, [composerText, editMessage, editingMessageId, id, sendMessage]);
 
     return (
         <PageLayout title={messageTitle} icon="arrow-left" onIconPress={() => router.back()}>
             <KeyboardAvoidingView
                 style={styles.flexOne}
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
             >
                 <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
                     <View style={[styles.flexOne, {backgroundColor: theme.colors.background}]}>
@@ -132,16 +134,10 @@ export default function EventChatScreen() {
                             onSend={handleSend}
                             text={composerText}
                             onLongPressMessage={handleLongPress}
-                            showUserAvatar
-                            renderUsernameOnMessage // Отображает имена авторов сообщений
-                            renderAvatarOnTop={false}
+                            isUserAvatarVisible
+                            keyboardAvoidingViewProps={{keyboardVerticalOffset: headerHeight}}
+                            // @ts-ignore GiftedChat types may not include bottomOffset but runtime uses it
                             bottomOffset={insets.bottom}
-                            avatarProps={{
-                                containerStyle: {
-                                    left: styles.avatarContainer,
-                                    right: styles.avatarContainer,
-                                },
-                            }}
                             renderInputToolbar={(props) => (
                                 <InputToolbar
                                     {...props}
@@ -150,6 +146,7 @@ export default function EventChatScreen() {
                                         {
                                             backgroundColor: theme.colors.surface,
                                             borderTopColor: theme.colors.surfaceVariant,
+                                            marginBottom: insets.bottom > 0 ? 0 : 8,
                                         },
                                     ]}
                                     primaryStyle={styles.inputToolbarPrimary}
@@ -163,27 +160,28 @@ export default function EventChatScreen() {
                                         fontSize: 12,
                                         fontWeight: '600',
                                         marginBottom: 2,
+                                        maxWidth: MAX_BUBBLE_WIDTH,
                                     }}
                                     containerStyle={{
-                                        left: {marginVertical: 4},
-                                        right: {marginVertical: 4},
-                                    }}
-                                    wrapperStyle={{
                                         left: {
                                             maxWidth: MAX_BUBBLE_WIDTH,
-                                            backgroundColor: theme.colors.surfaceVariant,
-                                            borderRadius: 18,
-                                            borderBottomLeftRadius: 4,
-                                            paddingHorizontal: Spacing.two, // Отступ Spacing.two внутри бабла[cite: 2, 3]
-                                            paddingVertical: Spacing.one,
+                                            marginVertical: 4,
                                         },
                                         right: {
                                             maxWidth: MAX_BUBBLE_WIDTH,
+                                            marginVertical: 4,
+                                        },
+                                    }}
+                                    wrapperStyle={{
+                                        left: {
+                                            backgroundColor: theme.colors.surfaceVariant,
+                                            borderRadius: 18,
+                                            borderBottomLeftRadius: 4,
+                                        },
+                                        right: {
                                             backgroundColor: theme.colors.primary,
                                             borderRadius: 18,
                                             borderBottomRightRadius: 4,
-                                            paddingHorizontal: Spacing.two, // Отступ Spacing.two внутри бабла[cite: 2, 3]
-                                            paddingVertical: Spacing.one,
                                         },
                                     }}
                                     textStyle={{
@@ -218,8 +216,8 @@ export default function EventChatScreen() {
                                     </View>
                                 </Send>
                             )}
-                            user={{_id: CURRENT_USER_ID, name: 'Вы'}}
-                            listViewProps={{
+                            user={{_id: Number(id) || 0, name: 'Вы'}}
+                            listProps={{
                                 contentContainerStyle: styles.listContent,
                                 showsVerticalScrollIndicator: false,
                             }}
@@ -238,7 +236,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     listContent: {
-        paddingHorizontal: Spacing.two, // Боковые отступы Spacing.two[cite: 2, 3]
+        paddingHorizontal: Spacing.two,
         paddingVertical: Spacing.two,
     },
     avatarContainer: {
@@ -249,8 +247,8 @@ const styles = StyleSheet.create({
     },
     inputToolbar: {
         borderTopWidth: 1,
-        paddingHorizontal: Spacing.two, // Боковые отступы Spacing.two[cite: 2, 3]
-        paddingVertical: 6,
+        paddingHorizontal: Spacing.two,
+        paddingVertical: 8,
     },
     inputToolbarPrimary: {
         alignItems: 'center',
