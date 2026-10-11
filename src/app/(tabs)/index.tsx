@@ -22,6 +22,7 @@ export default function EventsListScreen() {
   const insets = useSafeAreaInsets();
   const hasPendingRefreshRef = useRef(false);
   const [activeTab, setActiveTab] = useState<TabType>('fetchEvents');
+  const [secondaryTab, setSecondaryTab] = useState<'upcoming' | 'archive'>('upcoming');
   const [hasPendingRefresh, setHasPendingRefresh] = useState(false);
 
   // 1. Достаем нужные методы из store
@@ -39,7 +40,7 @@ export default function EventsListScreen() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   // Карта сопоставления значений табов с функциями загрузки
-  const fetchMap: Record<TabType, (page?: number) => Promise<void>> = {
+  const fetchMap: Record<TabType, (page?: number, status?: 'upcoming' | 'archive') => Promise<void>> = {
     fetchEvents,
     fetchOrganizingEvents,
     fetchAttendingEvents,
@@ -51,6 +52,8 @@ export default function EventsListScreen() {
     fetchAttendingEvents: 'attending',
   };
 
+  const isSecondaryTabVisible = activeTab === 'fetchOrganizingEvents' || activeTab === 'fetchAttendingEvents';
+
   // 2. Перезагружаем данные при изменении активного таба
   useEffect(() => {
     if (!isAuthenticated) {
@@ -60,9 +63,9 @@ export default function EventsListScreen() {
 
     const loadData = fetchMap[activeTab];
     if (loadData) {
-      void loadData(1);
+      void loadData(1, isSecondaryTabVisible ? secondaryTab : undefined);
     }
-  }, [activeTab, fetchEvents, fetchOrganizingEvents, fetchAttendingEvents, isAuthenticated]);
+  }, [activeTab, fetchEvents, fetchOrganizingEvents, fetchAttendingEvents, isAuthenticated, isSecondaryTabVisible, secondaryTab]);
 
   const handleTabChange = (v: string) => {
     const nextTab = v as TabType;
@@ -70,11 +73,11 @@ export default function EventsListScreen() {
     setHasPendingRefresh(false);
     setScreen(screenMap[nextTab]);
     setActiveTab(nextTab);
+    setSecondaryTab('upcoming');
   };
 
   // 3. Подписка на уведомления (только вне Expo Go)
   useEffect(() => {
-    // 2. Если это Expo Go, полностью прерываем выполнение hook'а
     if (isExpoGo) {
       return;
     }
@@ -114,7 +117,7 @@ export default function EventsListScreen() {
   const handleShowNewEvents = async () => {
     hasPendingRefreshRef.current = false;
     setHasPendingRefresh(false);
-    await fetchMap[activeTab](1);
+    await fetchMap[activeTab](1, isSecondaryTabVisible ? secondaryTab : undefined);
   };
 
   return (
@@ -129,6 +132,34 @@ export default function EventsListScreen() {
               {value: 'fetchAttendingEvents', label: 'Гость'},
             ]}
         />
+
+        {/* Вторичный уровень: тот же компонент, но компактнее */}
+        {isSecondaryTabVisible && (
+            <SegmentedButtons
+                value={secondaryTab}
+                onValueChange={(v) => setSecondaryTab(v as 'upcoming' | 'archive')}
+                density="high"
+                style={[styles.segmented, styles.secondarySegmented, {backgroundColor: theme.colors.surface}]}
+                theme={{roundness: 4}}
+                buttons={[
+                  {
+                    value: 'upcoming',
+                    label: 'Предстоящие',
+                    style: styles.secondaryButton,
+                    labelStyle: styles.secondaryLabel,
+                    showSelectedCheck: false,
+                  },
+                  {
+                    value: 'archive',
+                    label: 'Архив',
+                    style: styles.secondaryButton,
+                    labelStyle: styles.secondaryLabel,
+                    showSelectedCheck: false,
+                  },
+                ]}
+            />
+        )}
+
         <FlatList
             data={events}
             keyExtractor={(item) => String(item.id)}
@@ -144,13 +175,12 @@ export default function EventsListScreen() {
                 void fetchNextPage();
               }
             }}
-            /* Pull-to-refresh вызывают функцию текущего выбранного таба */
-            onRefresh={() => void fetchMap[activeTab](1)}
+            onRefresh={() => void fetchMap[activeTab](1, isSecondaryTabVisible ? secondaryTab : undefined)}
             ListEmptyComponent={
               isLoadingList ? null : (
                   <View style={styles.emptyState}>
                     <Text variant="bodyLarge" style={{color: theme.colors.onSurfaceVariant}}>
-                      Событий пока нет
+                      {secondaryTab === 'upcoming' ? 'Предстоящих событий пока нет' : 'Архивных событий пока нет'}
                     </Text>
                   </View>
               )
@@ -259,12 +289,27 @@ export default function EventsListScreen() {
 }
 
 const styles = StyleSheet.create({
+  /* Вторичный уровень */
+  secondarySegmented: {
+    alignSelf: 'center',
+    width: '100%',
+    paddingHorizontal: Spacing.four, // уже, чем основной: визуально «внутри» него
+  },
+  secondaryButton: {
+    minHeight: 30,
+  },
+  secondaryLabel: {
+    fontSize: 12,
+    fontWeight: '400',
+    marginVertical: 4,
+    marginHorizontal: 8,
+  },
   list: {
     maxWidth: MaxContentWidth,
     alignSelf: 'center',
     width: '100%',
     paddingHorizontal: Spacing.three,
-    paddingTop: Spacing.two,
+    paddingTop: Spacing.two, // Ритм отступов (12px до списка)
     gap: Spacing.three,
   },
   card: {
@@ -279,10 +324,27 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.three,
   },
   segmented: {
-    paddingBottom: Spacing.three,
-    paddingRight: Spacing.three,
-    paddingLeft: Spacing.three,
+    paddingHorizontal: Spacing.three,
+    paddingBottom: Spacing.two,
   },
+
+
+  /* Компактный вторичный уровень табов */
+  secondaryContainer: {
+    paddingHorizontal: Spacing.three,
+    paddingBottom: Spacing.two, // 12px до списка контента
+    width: '100%',
+    maxWidth: MaxContentWidth,
+    alignSelf: 'center',
+  },
+  secondaryWrapper: {
+    flexDirection: 'row',
+    borderRadius: 999, // Полная таблетка
+    borderWidth: 1, // Единая обводка 1px
+    padding: 2,
+    width: '100%',
+  },
+
   fabContainer: {
     position: 'absolute',
     left: 0,

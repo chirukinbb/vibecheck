@@ -113,6 +113,29 @@ export default function EventDetailScreen() {
   const isFull = slotsLeft <= 0;
   const occupancyText = isFull ? 'Мест нет' : `${slotsLeft} свободно`;
   const formattedDate = formatDate(event.planing_time);
+  const isArchivedEvent = (() => {
+    if (!event.planing_time) return false;
+
+    const ms = Number(event.planing_time) * 1000;
+    return Number.isFinite(ms) && ms < Date.now();
+  })();
+
+  const renderArchiveReviewButton = (label: string, icon: string) => (
+      <View style={styles.devActionWrap}>
+        <Button
+            mode="outlined"
+            icon={icon}
+            disabled
+            style={styles.devActionButton}
+            compact
+        >
+          {label}
+        </Button>
+        <Text variant="labelSmall" style={[styles.devBadge, {color: theme.colors.onSurfaceVariant}]}>
+          В разработке
+        </Text>
+      </View>
+  );
 
   return (
       <PageLayout
@@ -314,53 +337,65 @@ export default function EventDetailScreen() {
           >
             {Array.isArray(event.members) ? (
                 /* --- Режим организатора --- */
-                <View style={styles.actionRow}>
-                  <Button
-                      mode="outlined"
-                      icon="pencil"
-                      onPress={() => router.push(`/event/edit/${event.id}`)}
-                      style={styles.flexButton}
-                      compact
-                  >
-                    Изменить
-                  </Button>
+                <>
+                  {!isArchivedEvent && (
+                      <View style={styles.actionRow}>
+                        <Button
+                            mode="outlined"
+                            icon="pencil"
+                            onPress={() => router.push(`/event/edit/${event.id}`)}
+                            style={styles.flexButton}
+                            compact
+                        >
+                          Изменить
+                        </Button>
 
-                  <Button
-                      mode="contained"
-                      icon="chat"
-                      onPress={() => router.push(`/event/chat/${event.id}`)}
-                      style={styles.flexButton}
-                      compact
-                  >
-                    Чат
-                  </Button>
-                </View>
+                        <Button
+                            mode="contained"
+                            icon="chat"
+                            onPress={() => router.push(`/event/chat/${event.id}`)}
+                            style={styles.flexButton}
+                            compact
+                        >
+                          Чат
+                        </Button>
+                      </View>
+                  )}
+
+                  {isArchivedEvent && renderArchiveReviewButton('Посмотреть отзывы', 'star')}
+                </>
             ) : event.member ? (
                 /* --- Режим участника (подписан на ивент) --- */
-                <View style={styles.actionRow}>
-                  <Button
-                      mode="outlined"
-                      onPress={async () => {
-                        await unsubscribe(event.id);
-                      }}
-                      loading={isMutating}
-                      disabled={isMutating}
-                      style={styles.flexButton}
-                      compact
-                  >
-                    {isMutating ? 'Отписываем…' : 'Отписаться'}
-                  </Button>
+                <>
+                  {!isArchivedEvent && (
+                      <View style={styles.actionRow}>
+                        <Button
+                            mode="outlined"
+                            onPress={async () => {
+                              await unsubscribe(event.id);
+                            }}
+                            loading={isMutating}
+                            disabled={isMutating}
+                            style={styles.flexButton}
+                            compact
+                        >
+                          {isMutating ? 'Отписываем…' : 'Отписаться'}
+                        </Button>
 
-                  <Button
-                      mode="contained"
-                      icon="chat"
-                      onPress={() => router.push(`/event/chat/${event.chat_id}`)}
-                      style={styles.flexButton}
-                      compact
-                  >
-                    Чат
-                  </Button>
-                </View>
+                        <Button
+                            mode="contained"
+                            icon="chat"
+                            onPress={() => router.push(`/event/chat/${event.chat_id}`)}
+                            style={styles.flexButton}
+                            compact
+                        >
+                          Чат
+                        </Button>
+                      </View>
+                  )}
+
+                  {isArchivedEvent && renderArchiveReviewButton('Оставить отзыв', 'star')}
+                </>
             ) : (
                 /* --- Режим гостя (не подписан) --- */
                 <Button
@@ -394,6 +429,17 @@ const styles = StyleSheet.create({
   },
   flexButton: {
     flex: 1,
+  },
+  devActionWrap: {
+    marginTop: Spacing.two,
+    gap: Spacing.one,
+  },
+  devActionButton: {
+    width: '100%',
+  },
+  devBadge: {
+    textAlign: 'center',
+    fontWeight: '600',
   },
   centered: {flex: 1, justifyContent: 'center', alignItems: 'center'},
   content: {

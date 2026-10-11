@@ -73,8 +73,6 @@ export default function ProfileScreen() {
 
           if (message) {
               setProfileFeedback({type: 'success', text: String(message)});
-          } else {
-              setProfileFeedback({type: 'success', text: 'Профиль сохранён'});
           }
       } catch (e: any) {
           setProfileFeedback({type: 'error', text: e?.message ?? 'Ошибка при сохранении профиля'});
@@ -93,8 +91,6 @@ export default function ProfileScreen() {
 
           if (message) {
               setFilterFeedback({type: 'success', text: String(message)});
-          } else {
-              setFilterFeedback({type: 'success', text: 'Фильтр сохранён'});
           }
       } catch (e: any) {
           setFilterFeedback({type: 'error', text: e?.message ?? 'Ошибка при сохранении фильтра'});

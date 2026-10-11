@@ -15,9 +15,12 @@ import {apiClient} from './client';
 // ─── Список событий ──────────────────────────────────────────────────
 
 /** GET /api/v1/events — список событий с пагинацией (сокращённый вид) */
+export type EventListStatus = 'upcoming' | 'archive';
+
 export function getEvents(screen: string, params?: {
     page?: number;
     per_page?: number;
+    status?: EventListStatus;
 }): Promise<PaginatedResponse<EventListItem>> {
     return apiClient.get<PaginatedResponse<EventListItem>>('/events/' + screen, {params}).then((r) => r.data);
 }

@@ -1,5 +1,46 @@
+import {useChatStore} from '@/stores';
 import {router} from 'expo-router';
 import {Platform} from 'react-native';
+
+type NotificationsModule = {
+    setNotificationHandler?: (handler: any) => void;
+    addNotificationReceivedListener?: (listener: (notification: any) => void) => { remove: () => void };
+    addNotificationResponseReceivedListener?: (listener: (response: any) => void) => { remove: () => void };
+    getLastNotificationResponseAsync?: () => Promise<any>;
+    scheduleNotificationAsync?: (notification: any) => Promise<any>;
+    requestPermissionsAsync?: () => Promise<{ status: 'granted' | 'denied' | 'undetermined' | string }>;
+    getDevicePushTokenAsync?: () => Promise<{ data: string | null | undefined }>;
+    setNotificationChannelAsync?: (channelId: string, options: any) => Promise<any>;
+    AndroidNotificationPriority?: { DEFAULT: number | string; MAX: number | string };
+    AndroidImportance?: { DEFAULT: number | string; MAX: number | string };
+    AndroidNotificationVisibility?: { PUBLIC: number | string };
+};
+
+const createWebNotificationsStub = (): NotificationsModule => ({
+    setNotificationHandler: () => undefined,
+    addNotificationReceivedListener: () => ({remove: () => undefined}),
+    addNotificationResponseReceivedListener: () => ({remove: () => undefined}),
+    getLastNotificationResponseAsync: async () => undefined,
+    scheduleNotificationAsync: async () => undefined,
+    requestPermissionsAsync: async () => ({status: 'granted'}),
+    getDevicePushTokenAsync: async () => ({data: null}),
+    setNotificationChannelAsync: async () => undefined,
+    AndroidNotificationPriority: {DEFAULT: 0, MAX: 1},
+    AndroidImportance: {DEFAULT: 0, MAX: 1},
+    AndroidNotificationVisibility: {PUBLIC: 1},
+});
+
+export async function loadNotificationsApi(): Promise<NotificationsModule> {
+    if (Platform.OS === 'web') {
+        return createWebNotificationsStub();
+    }
+
+    try {
+        return (await import('expo-notifications')) as unknown as NotificationsModule;
+    } catch {
+        return createWebNotificationsStub();
+    }
+}
 
 export type NotificationRouteTarget =
     | {
@@ -83,12 +124,13 @@ function isDataOnlySilentNotification(notification: { request?: { content?: { ti
 }
 
 export async function setupGlobalNotificationRouting(): Promise<{ remove: () => void }> {
-    const Notifications = await import('expo-notifications');
+    const Notifications = await loadNotificationsApi();
 
-    Notifications.setNotificationHandler({
-        handleNotification: async (notification) => {
+    Notifications.setNotificationHandler?.({
+        handleNotification: async (notification: any) => {
             const route = getNotificationRoute(notification.request.content.data);
             const isSilent = isDataOnlySilentNotification(notification);
+            const androidPriority = Notifications.AndroidNotificationPriority ?? {DEFAULT: 0, MAX: 1};
 
             return {
                 shouldShowBanner: !isSilent,
@@ -96,8 +138,8 @@ export async function setupGlobalNotificationRouting(): Promise<{ remove: () => 
                 shouldPlaySound: !isSilent,
                 shouldSetBadge: false,
                 priority: isSilent
-                    ? Notifications.AndroidNotificationPriority.DEFAULT
-                    : Notifications.AndroidNotificationPriority.MAX,
+                    ? androidPriority.DEFAULT
+                    : androidPriority.MAX,
                 ...(route ? {triggerId: String(Date.now())} : {}),
             };
         },
@@ -112,26 +154,85 @@ export async function setupGlobalNotificationRouting(): Promise<{ remove: () => 
         }
     };
 
-    const lastResponse = await Notifications.getLastNotificationResponseAsync();
+    const lastResponse = await Notifications.getLastNotificationResponseAsync?.();
     if (lastResponse) {
         handleNotificationResponse(lastResponse);
     }
 
-    const receivedSubscription = Notifications.addNotificationReceivedListener((notification) => {
+    const receivedSubscription = Notifications.addNotificationReceivedListener?.((notification) => {
         const route = getNotificationRoute(notification.request.content.data);
+
+        const isSilent = isDataOnlySilentNotification(notification);
+        const parsed = parseNotificationData(notification.request.content.data) as Record<string, any> | undefined;
+
+        // Handle chat-specific actions coming from server data payloads.
+        try {
+            const action = parsed?.action as string | undefined;
+            const chatIdRaw = parsed?.chat_id ?? parsed?.chatId ?? parsed?.event_id ?? parsed?.eventId ?? parsed?.chat;
+            const messageIdRaw = parsed?.message_id ?? parsed?.messageId ?? parsed?.id;
+
+            const chatId = chatIdRaw ? Number(chatIdRaw) : NaN;
+            const messageId = messageIdRaw ? Number(messageIdRaw) : NaN;
+
+            if (!Number.isNaN(chatId)) {
+                // update/create -> refresh messages for this chat
+                if (action === 'update_chat_message' || action === 'create_chat_message' || parsed?.screen === 'chat') {
+                    // fetch fresh messages into the store (page 1)
+                    void useChatStore.getState().fetchMessages(chatId, 1);
+                }
+
+                // delete -> remove message from local store without calling API
+                if (action === 'delete_chat_message' && !Number.isNaN(messageId)) {
+                    useChatStore.setState((state) => ({
+                        messages: state.messages.filter((m) => m.id !== messageId),
+                    }));
+                }
+            }
+        } catch {
+            // swallow errors — notification handling must not crash app
+        }
+
+        // Re-present silent notifications as local banners on Android
+        if (isSilent) {
+            try {
+                const title = (parsed && (parsed.title || parsed.t || parsed.head)) ?? 'Новое уведомление';
+                const body = (parsed && (parsed.body || parsed.b || parsed.message)) ?? (route ? (route.pathname.includes('/chat') ? 'Новое сообщение в чате' : 'Новое событие') : 'Откройте приложение для подробностей');
+
+                const channelId = route && 'pathname' in route
+                    ? route.pathname.includes('/chat') ? 'chats' : 'events'
+                    : 'high_importance';
+                const androidPriority = Notifications.AndroidNotificationPriority ?? {DEFAULT: 0, MAX: 1};
+
+                void Notifications.scheduleNotificationAsync?.({
+                    content: ({
+                        title: String(title),
+                        body: String(body),
+                        data: notification.request.content.data,
+                        android: {
+                            channelId,
+                            priority: androidPriority.MAX,
+                        },
+                    } as any),
+                    trigger: null,
+                });
+            } catch {
+                // ignore failures to re-present
+            }
+        }
+
         if (route) {
             router.push(route);
         }
     });
 
-    const responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
+    const responseSubscription = Notifications.addNotificationResponseReceivedListener?.((response) => {
         handleNotificationResponse(response);
     });
 
     return {
         remove: () => {
-            receivedSubscription.remove();
-            responseSubscription.remove();
+            receivedSubscription?.remove();
+            responseSubscription?.remove();
         },
     };
 }
@@ -141,26 +242,26 @@ export function subscribeToEventListNotifications(
     onRefresh: () => void,
 ): Promise<{ remove: () => void }> {
     return (async () => {
-        const Notifications = await import('expo-notifications');
+        const Notifications = await loadNotificationsApi();
 
         const handleNotificationData = (data: { action?: string; screen?: string; event_id?: number | string; eventId?: number | string } | undefined) => {
             handleListNotificationData(data, onEvent, onRefresh);
         };
 
-        const receivedSubscription = Notifications.addNotificationReceivedListener((notification) => {
+        const receivedSubscription = Notifications.addNotificationReceivedListener?.((notification) => {
             const data = notification.request.content.data as { action?: string; screen?: string; event_id?: number | string; eventId?: number | string } | undefined;
             handleNotificationData(data);
         });
 
-        const responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
+        const responseSubscription = Notifications.addNotificationResponseReceivedListener?.((response) => {
             const data = response.notification.request.content.data as { action?: string; screen?: string; event_id?: number | string; eventId?: number | string } | undefined;
             handleNotificationData(data);
         });
 
         return {
             remove: () => {
-                receivedSubscription.remove();
-                responseSubscription.remove();
+                receivedSubscription?.remove();
+                responseSubscription?.remove();
             },
         };
     })();
@@ -198,25 +299,46 @@ export async function requestDeviceFirebaseToken(): Promise<string | null> {
     }
 
     try {
-        const Notifications = await import('expo-notifications');
+        const Notifications = await loadNotificationsApi();
 
         if (Platform.OS === 'android') {
-            await Notifications.setNotificationChannelAsync('high_importance', {
+            // General high importance fallback
+            await Notifications.setNotificationChannelAsync?.('high_importance', {
                 name: 'Важные уведомления',
-                importance: Notifications.AndroidImportance.MAX,
+                importance: Notifications.AndroidImportance?.MAX,
                 vibrationPattern: [0, 250, 250, 250],
                 enableVibrate: true,
                 showBadge: true,
-                lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+                lockscreenVisibility: Notifications.AndroidNotificationVisibility?.PUBLIC,
+            });
+
+            // Channel for event-related notifications
+            await Notifications.setNotificationChannelAsync?.('events', {
+                name: 'События',
+                importance: Notifications.AndroidImportance?.DEFAULT,
+                vibrationPattern: [0, 150, 100],
+                enableVibrate: true,
+                showBadge: true,
+                lockscreenVisibility: Notifications.AndroidNotificationVisibility?.PUBLIC,
+            });
+
+            // Channel for chat messages
+            await Notifications.setNotificationChannelAsync?.('chats', {
+                name: 'Чаты',
+                importance: Notifications.AndroidImportance?.MAX,
+                vibrationPattern: [0, 250, 250],
+                enableVibrate: true,
+                showBadge: true,
+                lockscreenVisibility: Notifications.AndroidNotificationVisibility?.PUBLIC,
             });
         }
 
-        const {status} = await Notifications.requestPermissionsAsync();
+        const {status} = await Notifications.requestPermissionsAsync?.() ?? {status: 'granted'};
         if (status !== 'granted') {
             return null;
         }
 
-        const token = (await Notifications.getDevicePushTokenAsync()).data;
+        const token = (await Notifications.getDevicePushTokenAsync?.())?.data;
         return typeof token === 'string' && token.length > 0 ? token : null;
     } catch {
         return null;

@@ -4,13 +4,14 @@ import * as Location from 'expo-location';
 import {router} from 'expo-router';
 import {useEffect, useState} from 'react';
 import {Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View} from 'react-native';
-import {Button, Chip, Modal, Portal, Searchbar, Surface, Text, TextInput, useTheme} from 'react-native-paper';
+import {Button, Surface, Text, TextInput, useTheme} from 'react-native-paper';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import AddressPicker, {Coordinates} from '@/components/address-picker';
 import ImagePickerWithCrop from '@/components/image-picker';
 import PageLayout from '@/components/page-layout';
 import SingleSelect from '@/components/single-select';
+import TagCloudInput from '@/components/tag-cloud-input';
 import {MaxContentWidth, Spacing} from '@/constants/theme';
 import {useCategoriesStore, useEventsStore} from '@/stores';
 import {useTagsStore} from "@/stores/tagsStore";
@@ -41,9 +42,6 @@ export default function CreateEventScreen() {
   const [planingTime, setPlaningTime] = useState<Date | null>(null);
   const [slots, setSlots] = useState('');
   const [tags, setTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState('');
-  const [tagModalVisible, setTagModalVisible] = useState(false);
-  const [tagQuery, setTagQuery] = useState('');
   const [thumbnail, setThumbnail] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -183,112 +181,11 @@ export default function CreateEventScreen() {
                 />
 
                 {/* Теги */}
-                <View style={styles.tagField}>
-                  <Button
-                      mode="outlined"
-                      onPress={() => {
-                        setTagQuery('');
-                        setTagModalVisible(true);
-                      }}
-                      style={styles.tagSelectorButton}
-                  >
-                    {tags.length > 0 ? `Теги (${tags.length})` : 'Выбрать теги'}
-                  </Button>
-
-                  <View style={styles.chipRow}>
-                    {tags.map((tag) => (
-                        <Chip
-                            key={tag}
-                            onPress={() => setTags(tags.filter((t) => t !== tag))}
-                            style={styles.chip}
-                            compact
-                        >
-                          #{tag}
-                        </Chip>
-                    ))}
-                  </View>
-
-                  <Portal>
-                    <Modal
-                        visible={tagModalVisible}
-                        onDismiss={() => setTagModalVisible(false)}
-                        contentContainerStyle={[
-                          styles.modal,
-                          {backgroundColor: theme.colors.elevation.level3},
-                        ]}
-                    >
-                      <Searchbar
-                          placeholder="Поиск тегов..."
-                          value={tagQuery}
-                          onChangeText={setTagQuery}
-                          style={styles.searchbar}
-                          autoFocus
-                      />
-
-                      <View style={styles.tagInputRow}>
-                        <TextInput
-                            mode="outlined"
-                            label="Новый тег"
-                            value={tagInput}
-                            onChangeText={setTagInput}
-                            placeholder="йога"
-                            style={styles.tagTextInput}
-                        />
-                        <Button
-                            mode="contained"
-                            onPress={() => {
-                              const nextTag = tagInput.trim();
-                              if (!nextTag) return;
-                              if (!tags.includes(nextTag)) {
-                                setTags([...tags, nextTag]);
-                              }
-                              setTagInput('');
-                            }}
-                            style={styles.addTagButton}
-                        >
-                          Добавить
-                        </Button>
-                      </View>
-
-                      <ScrollView style={styles.list} nestedScrollEnabled>
-                        {(suggestedTags ?? [])
-                            .filter((tag) =>
-                                tag.name.toLowerCase().includes(tagQuery.toLowerCase()),
-                            )
-                            .map((tag) => {
-                              const tagName = tag.name;
-                              const selected = tags.includes(tagName);
-                              return (
-                                  <Chip
-                                      key={tag.id}
-                                      mode={selected ? 'flat' : 'outlined'}
-                                      selected={selected}
-                                      onPress={() => {
-                                        if (selected) {
-                                          setTags(tags.filter((t) => t !== tagName));
-                                        } else {
-                                          setTags([...tags, tagName]);
-                                        }
-                                      }}
-                                      style={styles.modalChip}
-                                      compact
-                                  >
-                                    #{tagName}
-                                  </Chip>
-                              );
-                            })}
-                      </ScrollView>
-
-                      <Button
-                          mode="contained"
-                          onPress={() => setTagModalVisible(false)}
-                          style={styles.doneButton}
-                      >
-                        Готово
-                      </Button>
-                    </Modal>
-                  </Portal>
-                </View>
+                <TagCloudInput
+                    value={tags}
+                    onChange={setTags}
+                    suggestedTags={suggestedTags}
+                />
 
                 {/* Обложка */}
                 <View style={styles.coverRow}>
@@ -375,30 +272,6 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
     borderWidth: 1,
   },
-  tagField: {gap: Spacing.two},
-  tagInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-  },
-  tagTextInput: {flex: 1},
-  addTagButton: {alignSelf: 'flex-end'},
-  tagSelectorButton: {alignSelf: 'flex-start'},
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.two,
-  },
-  modal: {
-    margin: 24,
-    padding: 16,
-    borderRadius: 12,
-  },
-  searchbar: {marginBottom: 12},
-  list: {maxHeight: 220, flexGrow: 0},
-  modalChip: {borderRadius: Spacing.two, marginBottom: Spacing.two},
-  chip: {borderRadius: Spacing.two},
-  doneButton: {marginTop: 12, alignSelf: 'flex-end'},
   coverRow: {
     flexDirection: 'row',
     alignItems: 'center',

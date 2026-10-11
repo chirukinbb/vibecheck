@@ -25,8 +25,17 @@ export default function BootstrapScreen() {
     const didRunRef = useRef(false);
 
     const filter = useAuthStore((state) => state.filter);
-    const isFilterEmpty = !filter || Object.values(filter).every((val) => val === null || val === undefined);
 
+    const isEmptyValue = (val: unknown): boolean => {
+        if (val === null || val === undefined) return true;
+        if (typeof val === 'string') return val.trim() === '';
+        if (Array.isArray(val)) return val.length === 0;
+        if (typeof val === 'object') return Object.keys(val as object).length === 0;
+        return false;
+    };
+
+    const isFilterEmpty = !filter || Object.values(filter).every(isEmptyValue);
+    console.log('isFilterEmpty', isFilterEmpty, 'filter', filter)
     useEffect(() => {
         if (didRunRef.current) return;
         didRunRef.current = true;
@@ -59,10 +68,11 @@ export default function BootstrapScreen() {
                     fetchTags()
                 ]);
 
-                if (isFilterEmpty)
+                if (!isFilterEmpty) {
                     router.replace('/(tabs)/profile');
-                else
+                } else {
                     router.replace('/(tabs)');
+                }
             } catch (e: any) {
                 setError(e?.message ?? 'Не удалось загрузить данные аккаунта');
                 setTimeout(() => {

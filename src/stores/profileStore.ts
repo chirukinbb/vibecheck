@@ -29,9 +29,17 @@ export const useProfileStore = create<ProfileState>((set) => ({
       });
       return 'Профиль обновлён';
     } catch (e: any) {
-      const msg = e?.message ?? 'Ошибка обновления профиля';
+      const responseMessage = e?.response?.data?.message;
+      const validationErrors = e?.response?.data?.errors;
+      const firstValidationError = typeof validationErrors === 'object'
+          ? Object.values(validationErrors as Record<string, unknown>)
+              .flatMap((value) => Array.isArray(value) ? value : [value])
+              .find((value): value is string => typeof value === 'string')
+          : undefined;
+
+      const msg = firstValidationError ?? responseMessage ?? e?.message ?? 'Ошибка обновления профиля';
       set({error: msg});
-      return null;
+      throw new Error(msg);
     } finally {
       set({isUpdating: false});
     }

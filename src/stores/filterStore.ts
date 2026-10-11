@@ -28,9 +28,17 @@ export const useFilterStore = create<FilterState>((set) => ({
       });
       return 'Фильтр обновлён';
     } catch (e: any) {
-      const msg = e?.message ?? 'Ошибка обновления фильтра';
+      const responseMessage = e?.response?.data?.message;
+      const validationErrors = e?.response?.data?.errors;
+      const firstValidationError = typeof validationErrors === 'object'
+          ? Object.values(validationErrors as Record<string, unknown>)
+              .flatMap((value) => Array.isArray(value) ? value : [value])
+              .find((value): value is string => typeof value === 'string')
+          : undefined;
+
+      const msg = firstValidationError ?? responseMessage ?? e?.message ?? 'Ошибка обновления фильтра';
       set({error: msg});
-      return null;
+      throw new Error(msg);
     } finally {
       set({isUpdating: false});
     }
