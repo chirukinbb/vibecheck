@@ -2,7 +2,7 @@
   "expo": {
     "name": "VibeCheck",
     "slug": "vibecheck",
-    "version": "1.0.7",
+    "version": "1.0.8",
     "icon": "./assets/images/VibeCheck-logo-icon.png",
     "scheme": "events",
     "userInterfaceStyle": "automatic",
@@ -48,17 +48,29 @@
       "@react-native-community/datetimepicker",
       "expo-secure-store",
       "expo-image",
-      "expo-status-bar"
-    ],
-    "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
-    },
-    "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "3a1983f2-bf21-491d-9fd1-370fe0bd49e4"
-      }
+      "expo-status-bar",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableProguardInReleaseBuilds": true,
+            "shrinkResourcesInReleaseBuilds": true
+          }
+        }
+      ],
+      "experiments"
+      :
+      {
+        "typedRoutes": true,
+        "reactCompiler": true
+      },
+      "extra"
+      :
+      {
+        "router": {},
+        "eas": {
+          "projectId": "3a1983f2-bf21-491d-9fd1-370fe0bd49e4"
+        }
     }
   }
 }
