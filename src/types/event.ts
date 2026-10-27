@@ -22,6 +22,10 @@ interface EventBase {
     reserved: number | null;
     /** Unix timestamp (секунды) */
     planing_time: number | string | null;
+    /** Статус модерации события */
+    approved?: boolean | null;
+    /** Причина отказа/возвращения на доработку */
+    reason?: string | null;
 }
 
 /**

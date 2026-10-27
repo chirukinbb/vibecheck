@@ -14,7 +14,7 @@ import {paperDarkTheme, paperLightTheme} from '@/theme/paper-theme';
 export default function RootLayout() {
     const scheme = useColorScheme();
     const themeMode = useSettingsStore((state) => state.themeMode);
-    const {loginWithToken} = useAuthStore();
+    const {hydrateFromStorage} = useAuthStore();
 
     useEffect(() => {
         let notificationCleanup: { remove: () => void } | undefined;
@@ -29,7 +29,7 @@ export default function RootLayout() {
             try {
                 const stored = await SecureStore.getItemAsync('auth_token');
                 if (stored) {
-                    // if token exists, reuse bootstrap flow
+                    await hydrateFromStorage();
                     router.replace(`/bootstrap/${encodeURIComponent(stored)}`);
                     return;
                 }
@@ -76,7 +76,7 @@ export default function RootLayout() {
             notificationCleanup?.remove();
             subscription?.remove();
         };
-    }, [loginWithToken]);
+    }, [hydrateFromStorage]);
 
     const resolvedScheme = themeMode === 'system' ? scheme : themeMode;
     const paperTheme = resolvedScheme === 'dark' ? paperDarkTheme : paperLightTheme;

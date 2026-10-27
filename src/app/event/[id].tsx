@@ -113,6 +113,7 @@ export default function EventDetailScreen() {
   const isFull = slotsLeft <= 0;
   const occupancyText = isFull ? 'Мест нет' : `${slotsLeft} свободно`;
   const formattedDate = formatDate(event.planing_time);
+  const hasApprovalIssue = event.approved === false;
   const isArchivedEvent = (() => {
     if (!event.planing_time) return false;
 
@@ -163,6 +164,33 @@ export default function EventDetailScreen() {
             >
               {event.category}
             </Chip>
+
+            {hasApprovalIssue && (
+                <Surface
+                    elevation={0}
+                    style={[
+                      styles.approvalBanner,
+                      {
+                        backgroundColor: theme.colors.errorContainer,
+                        borderColor: theme.colors.error,
+                      }
+                    ]}
+                >
+                  <Text variant="labelLarge" style={[styles.approvalTitle, {color: theme.colors.onErrorContainer}]}>
+                    Событие не подтверждено
+                  </Text>
+                  {event.reason && (
+                      <Text variant="bodyMedium" style={[styles.approvalText, {color: theme.colors.onErrorContainer}]}>
+                        Причина: {event.reason}
+                      </Text>
+                  )}
+                  <Text variant="bodyMedium" style={[styles.approvalText, {color: theme.colors.onErrorContainer}]}>
+                    {event.reason
+                        ? 'Ты можешь обновить событие и отправить его на повторную проверку.'
+                        : 'Ожидайте подтверждения модератором.'}
+                  </Text>
+                </Surface>
+            )}
 
             <Text variant="headlineSmall" style={[styles.eventTitle, {color: theme.colors.onSurface}]}>
               {event.title}
@@ -468,6 +496,19 @@ const styles = StyleSheet.create({
     padding: Spacing.four,
     gap: Spacing.three,
     marginBottom: Spacing.three,
+  },
+  approvalBanner: {
+    borderRadius: Spacing.three,
+    padding: Spacing.three,
+    borderWidth: 1,
+    marginBottom: Spacing.three,
+    gap: Spacing.one,
+  },
+  approvalTitle: {
+    fontWeight: '700',
+  },
+  approvalText: {
+    lineHeight: 22,
   },
   eventTitle: {
     fontWeight: '700',

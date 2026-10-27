@@ -27,25 +27,44 @@ export default function MultiSelect<T>({
 
   const toggleOption = (code: T) => {
     if (selected.includes(code)) {
-      onChange(selected.filter((c) => c !== code));
+        onChange(selected.filter((c) => c !== code));
     } else {
-      onChange([...selected, code]);
+        onChange([...selected, code]);
     }
   };
 
-  const filtered = options.filter((opt) =>
-      opt.label.toLowerCase().includes(query.toLowerCase()),
-  );
+    const filtered = options.filter((opt) =>
+        opt.label.toLowerCase().includes(query.toLowerCase()),
+    );
 
-  return (
-      <View style={styles.container}>
-        <Text variant="labelLarge" style={styles.label}>
-          {label}
-        </Text>
+    const toggleAllFiltered = () => {
+        const filteredCodes = filtered.map((opt) => opt.code);
 
-        <View style={styles.chipRow}>
-          {selected.map((code) => {
-            const opt = options.find((o) => o.code === code);
+        if (filteredCodes.length === 0) {
+            return;
+        }
+
+        const allSelected = filteredCodes.every((code) => selected.includes(code));
+
+        if (allSelected) {
+            onChange(selected.filter((code) => !filteredCodes.includes(code)));
+            return;
+        }
+
+        onChange(Array.from(new Set([...selected, ...filteredCodes])));
+    };
+
+    const allFilteredSelected = filtered.length > 0 && filtered.every((opt) => selected.includes(opt.code));
+
+    return (
+        <View style={styles.container}>
+            <Text variant="labelLarge" style={styles.label}>
+                {label}
+            </Text>
+
+            <View style={styles.chipRow}>
+                {selected.map((code) => {
+                    const opt = options.find((o) => o.code === code);
             if (!opt) return null;
             return (
                 <Chip
@@ -79,23 +98,35 @@ export default function MultiSelect<T>({
                 {backgroundColor: theme.colors.surface},
               ]}
           >
-            <Searchbar
-                placeholder="Поиск..."
-                value={query}
-                onChangeText={setQuery}
-                style={styles.searchbar}
-                autoFocus
-            />
+              <Searchbar
+                  placeholder="Поиск..."
+                  value={query}
+                  onChangeText={setQuery}
+                  style={styles.searchbar}
+                  autoFocus
+              />
 
-            <ScrollView style={styles.list} nestedScrollEnabled>
-              {filtered.length === 0 && (
-                  <Text style={styles.emptyText}>Ничего не найдено</Text>
+              {filtered.length > 0 && (
+                  <Button
+                      mode="text"
+                      compact
+                      onPress={toggleAllFiltered}
+                      style={styles.toggleAllButton}
+                      labelStyle={styles.toggleAllLabel}
+                  >
+                      {allFilteredSelected ? 'Снять выделение' : 'Выбрать все'}
+                  </Button>
               )}
-              {filtered.map((opt, index) => (
-                  <Chip
-                      key={`${String(opt.code)}-${index}`}
-                      selected={selected.includes(opt.code)}
-                      onPress={() => toggleOption(opt.code)}
+
+              <ScrollView style={styles.list} nestedScrollEnabled>
+                  {filtered.length === 0 && (
+                      <Text style={styles.emptyText}>Ничего не найдено</Text>
+                  )}
+                  {filtered.map((opt, index) => (
+                      <Chip
+                          key={`${String(opt.code)}-${index}`}
+                          selected={selected.includes(opt.code)}
+                          onPress={() => toggleOption(opt.code)}
                       style={[
                         styles.modalChip,
                         {
@@ -126,18 +157,20 @@ export default function MultiSelect<T>({
 
 const styles = StyleSheet.create({
   container: {gap: 8},
-  label: {paddingBottom: 4},
-  chipRow: {flexDirection: 'row', flexWrap: 'wrap', gap: 8},
-  chip: {borderRadius: 8},
-  addButton: {alignSelf: 'flex-start'},
-  modal: {
-    margin: 24,
-    padding: 16,
-    borderRadius: 12,
-  },
-  searchbar: {marginBottom: 8},
-  list: {maxHeight: 200, flexGrow: 0},
-  modalChip: {borderRadius: 8, width: '100%'},
-  emptyText: {textAlign: 'center', paddingVertical: 16},
-  doneButton: {marginTop: 12, alignSelf: 'flex-end'},
+    label: {paddingBottom: 4},
+    chipRow: {flexDirection: 'row', flexWrap: 'wrap', gap: 8},
+    chip: {borderRadius: 8},
+    addButton: {alignSelf: 'flex-start'},
+    modal: {
+        margin: 24,
+        padding: 16,
+        borderRadius: 12,
+    },
+    searchbar: {marginBottom: 8},
+    toggleAllButton: {alignSelf: 'flex-end', marginBottom: 8},
+    toggleAllLabel: {textTransform: 'none'},
+    list: {maxHeight: 200, flexGrow: 0},
+    modalChip: {borderRadius: 8, width: '100%'},
+    emptyText: {textAlign: 'center', paddingVertical: 16},
+    doneButton: {marginTop: 12, alignSelf: 'flex-end'},
 });

@@ -56,7 +56,8 @@ export default function EventChatScreen() {
     const {selectedEvent} = useEventsStore();
 
     // ID текущего пользователя (НЕ id события)
-    const currentUserId = useAuthStore((state) => state.user?.id);
+    const currentUserId = useAuthStore((state) => state.id);
+    useAuthStore((state) => console.log(state)); // подписка на профиль, чтобы обновлялся при изменении
 
     const headerHeight = 56 + insets.top;
     const bottomInset = Math.max(insets.bottom, 8);
@@ -188,21 +189,35 @@ export default function EventChatScreen() {
 
     /**
      * Долгий тап: меню показываем только для своих сообщений.
+     * GiftedChat передаёт IMessage, а серверные сообщения имеют author.id.
      */
     const handleLongPress = useCallback(
-        (_context: unknown, message: IMessage) => {
-            if (currentUserId == null) return;
-            if (message.user._id !== currentUserId) return;
+        (_context: unknown, message?: unknown) => {
+            if (currentUserId == null || !message) return;
+
+            const typedMessage = message as Partial<IMessage> & {
+                id?: number | string;
+                author?: { id?: number | string };
+                user?: { _id?: number | string };
+            };
+
+            const messageAuthorId = typedMessage.author?.id ?? typedMessage.user?._id;
+            if (String(messageAuthorId) !== String(currentUserId)) return;
+
+            const messageId = String(typedMessage._id ?? typedMessage.id ?? '');
+            if (!messageId) return;
+            console.log('handleLongPress', {message, currentUserId});
+
 
             Alert.alert('Сообщение', undefined, [
                 {
                     text: 'Редактировать',
-                    onPress: () => handleEditMessage(String(message._id)),
+                    onPress: () => handleEditMessage(messageId),
                 },
                 {
                     text: 'Удалить',
                     style: 'destructive',
-                    onPress: () => handleDeleteMessage(String(message._id)),
+                    onPress: () => handleDeleteMessage(messageId),
                 },
                 {text: 'Отмена', style: 'cancel'},
             ]);
@@ -386,9 +401,13 @@ export default function EventChatScreen() {
                                 ]}
                             />
                         )}
-                        renderBubble={(props) => (
+                        renderBubble={(bubbleProps) => (
                             <Bubble
-                                {...props}
+                                {...bubbleProps}
+                                onLongPressMessage={handleLongPress}
+                                touchableProps={{
+                                    delayLongPress: 450,
+                                }}
                                 usernameStyle={{
                                     color: theme.colors.primary,
                                     fontSize: 12,

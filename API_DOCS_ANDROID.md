@@ -383,7 +383,9 @@ Authorization: Bearer 1|abc123def456...
       "tags": [
         "tag_name"
       ]
-    }
+    },
+    "approved":false,
+    "reason":"becouse"
 }
 ```
 

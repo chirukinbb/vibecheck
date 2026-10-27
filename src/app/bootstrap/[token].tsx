@@ -24,8 +24,6 @@ export default function BootstrapScreen() {
     const [error, setError] = useState<string | null>(null);
     const didRunRef = useRef(false);
 
-    const filter = useAuthStore((state) => state.filter);
-
     const isEmptyValue = (val: unknown): boolean => {
         if (val === null || val === undefined) return true;
         if (typeof val === 'string') return val.trim() === '';
@@ -34,8 +32,15 @@ export default function BootstrapScreen() {
         return false;
     };
 
-    const isFilterEmpty = !filter || Object.values(filter).every(isEmptyValue);
-    console.log('isFilterEmpty', isFilterEmpty, 'filter', filter)
+    const getCurrentUserState = () => {
+        const state = useAuthStore.getState();
+        return {
+            id: state.id,
+            filter: state.filter,
+            profile: state.profile,
+            name: state.name,
+        };
+    };
     useEffect(() => {
         if (didRunRef.current) return;
         didRunRef.current = true;
@@ -50,25 +55,32 @@ export default function BootstrapScreen() {
                 setLoading(true);
                 setError(null);
 
-                // 1. Сохраняем токен и настраиваем заголовки авторизации
+                // 1. Сохраняем токен и заполняем user data из /me
                 await loginWithToken(token);
+
+                const currentUser = getCurrentUserState();
+
+                // 2. После логина проверяем актуальные поля auth-store, а не старое состояние до запроса
+                const filter = currentUser.filter;
+                const isFilterEmpty = !filter || Object.values(filter).every(isEmptyValue);
 
                 const deviceToken = await requestDeviceFirebaseToken();
                 if (deviceToken) {
                     await registerToken(deviceToken);
                 }
 
-                // 2. Искусственная задержка для плавности UI
+                // 3. Искусственная задержка для плавности UI
                 await new Promise((resolve) => setTimeout(resolve, 500));
 
-                // 3. Загружаем все базовые справочники параллельно
+                // 4. Загружаем базовые справочники после успешной авторизации
                 await Promise.all([
                     fetchCategories(),
                     fetchLanguages(),
                     fetchTags()
                 ]);
 
-                if (!isFilterEmpty) {
+                // 5. Редирект только после того, как user-data реально заполнена
+                if (currentUser.id != null && currentUser.profile && isFilterEmpty) {
                     router.replace('/(tabs)/profile');
                 } else {
                     router.replace('/(tabs)');

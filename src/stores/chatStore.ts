@@ -4,15 +4,29 @@ import {deleteChatMessage, getChatMessages, sendChatMessage, updateChatMessage,}
 import type {PaginationMeta} from '../types';
 import type {ChatMessage, ChatMessageDTO, ChatMessageUpdateDTO} from '../types/chat';
 
-const upsertMessage = (messages: ChatMessage[], message: ChatMessage): ChatMessage[] => {
-  const exists = messages.some((item) => item.id === message.id);
-
-  if (exists) {
-    return messages.map((item) => (item.id === message.id ? message : item));
-  }
-
-  return [message, ...messages];
+const getMessageTimestamp = (value: number | string | null | undefined): number => {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
 };
+
+const sortMessagesByTimestamp = (messages: ChatMessage[]): ChatMessage[] =>
+    [...messages].sort((a, b) => {
+      const diff = getMessageTimestamp(a.created_at) - getMessageTimestamp(b.created_at);
+      return diff !== 0 ? diff : a.id - b.id;
+    });
+
+const mergeMessages = (existing: ChatMessage[], incoming: ChatMessage[]): ChatMessage[] => {
+  const map = new Map<number, ChatMessage>();
+
+  [...existing, ...incoming].forEach((message) => {
+    map.set(message.id, message);
+  });
+
+  return sortMessagesByTimestamp([...map.values()]);
+};
+
+const upsertMessage = (messages: ChatMessage[], message: ChatMessage): ChatMessage[] =>
+    mergeMessages(messages, [message]);
 
 interface ChatState {
   messages: ChatMessage[];
@@ -40,7 +54,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     try {
       const res = await getChatMessages(eventId, {page, per_page: 30});
       set({
-        messages: page === 1 ? res.data : [...get().messages, ...res.data],
+        messages: page === 1 ? mergeMessages([], res.data) : mergeMessages(get().messages, res.data),
         meta: res.meta,
       });
     } catch (e: any) {

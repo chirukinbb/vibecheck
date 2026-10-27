@@ -23,6 +23,7 @@ export interface LoginResponse {
 
 /** Ответ GET /api/v1/me — данные текущего пользователя (БЕЗ токена и БЕЗ обёртки data) */
 export interface MeResponse {
+  id: number;
   name: string;
   profile: Profile;
   filter: GeoFilter;

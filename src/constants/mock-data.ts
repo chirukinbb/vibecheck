@@ -209,6 +209,7 @@ export const MOCK_FILTER: GeoFilter = {
 // ─── Ответ /me ────────────────────────────────────────────────────────
 
 export const MOCK_AUTH_RESPONSE: MeResponse = {
+    id: 1,
     name: 'Богдан',
     profile: MOCK_PROFILE,
     filter: MOCK_FILTER,
