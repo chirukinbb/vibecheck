@@ -1,20 +1,20 @@
 // src/app/(tabs)/create.tsx — создание события
 import DateTimePicker from '@/components/date-time-picker';
 import * as Location from 'expo-location';
-import {router} from 'expo-router';
-import {useEffect, useState} from 'react';
-import {Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View} from 'react-native';
-import {Button, Surface, Text, TextInput, useTheme} from 'react-native-paper';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { Button, Surface, Text, TextInput, useTheme } from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import AddressPicker, {Coordinates} from '@/components/address-picker';
+import AddressPicker, { Coordinates } from '@/components/address-picker';
 import ImagePickerWithCrop from '@/components/image-picker';
 import PageLayout from '@/components/page-layout';
 import SingleSelect from '@/components/single-select';
 import TagCloudInput from '@/components/tag-cloud-input';
-import {MaxContentWidth, Spacing} from '@/constants/theme';
-import {useCategoriesStore, useEventsStore} from '@/stores';
-import {useTagsStore} from "@/stores/tagsStore";
+import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { useCategoriesStore, useEventsStore } from '@/stores';
+import { useTagsStore } from "@/stores/tagsStore";
 
 export default function CreateEventScreen() {
   const theme = useTheme();
@@ -44,6 +44,8 @@ export default function CreateEventScreen() {
   const [tags, setTags] = useState<string[]>([]);
   const [thumbnail, setThumbnail] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const sanitizeDigits = (value: string) => value.replace(/\D/g, '');
 
   const handleThumbnailSelected = (uri: string) => {
     setThumbnail(uri);
@@ -175,7 +177,7 @@ export default function CreateEventScreen() {
                     mode="outlined"
                     label="Количество мест"
                     value={slots}
-                    onChangeText={setSlots}
+                    onChangeText={(text) => setSlots(sanitizeDigits(text))}
                     keyboardType="numeric"
                     placeholder="20"
                 />

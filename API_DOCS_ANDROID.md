@@ -1135,12 +1135,14 @@ MessageResource
 
 | Статус | Условие | Тело ответа |
 |--------|---------|------------|
-| **200** | Обновлено | `true` (см. примечание ниже) |
+| **200** | Обновлено | `{"data": {"id": 12, "event_id": 3, "content": "Исправленный текст", "created_at": 1730000000, "updated_at": 1730000100, "author": {...}}}` |
 | **401** | Без токена | `{"message":"Unauthenticated."}` |
 | **403** | Не автор сообщения | `{"message":"You are not authorized to access this resource"}` |
 | **422** | Ошибка валидации | `{"message":"...","errors":{"content":["The content field is required."]}}` |
 
 **Валидация**: `content` — required, string.
+
+**Примечание**: обновление выполняется через `PATCH`, а на выходе сервер возвращает `MessageResource::make($message)`, то есть объект сообщения внутри `data`.
 
 **Middleware**: `MessageAuthorMiddleware`
 

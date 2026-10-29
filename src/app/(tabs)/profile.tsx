@@ -3,16 +3,16 @@ import AddressPicker from '@/components/address-picker';
 import ImagePickerWithCrop from '@/components/image-picker';
 import MultiSelect from '@/components/multi-select';
 import PageLayout from '@/components/page-layout';
-import {AVAILABLE_LANGUAGES} from '@/constants/mock-data';
-import {MaxContentWidth, Spacing} from '@/constants/theme';
-import {useAuthStore, useCategoriesStore, useFilterStore, useProfileStore} from '@/stores';
-import {useSettingsStore} from '@/stores/settingsStore';
+import { AVAILABLE_LANGUAGES } from '@/constants/mock-data';
+import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { useAuthStore, useCategoriesStore, useFilterStore, useProfileStore } from '@/stores';
+import { useSettingsStore } from '@/stores/settingsStore';
 import * as Location from 'expo-location';
-import {router} from 'expo-router';
-import {useEffect, useState} from 'react';
-import {KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View} from 'react-native';
-import {Avatar, Button, SegmentedButtons, Surface, Text, TextInput, useTheme} from 'react-native-paper';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Avatar, Button, SegmentedButtons, Surface, Text, TextInput, useTheme } from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ProfileScreen() {
   const theme = useTheme();
@@ -36,21 +36,49 @@ export default function ProfileScreen() {
     useEffect(() => {
         if (!profile) return;
         setName(profile.name ?? '');
-        setLanguages(profile.languages ?? ['ru', 'en']);
+        setLanguages(profile.languages ?? []);
         setBio(profile.bio ?? '');
     setAvatarUri(profile.avatar_url ?? null);
   }, [profile]);
 
   // ─── Профиль ─────────────────────────────────────────────────
   const [name, setName] = useState(profile?.name ?? '');
-  const [languages, setLanguages] = useState<string[]>(profile?.languages ?? ['ru', 'en']);
+  const [languages, setLanguages] = useState<string[]>(profile?.languages ?? []);
   const [bio, setBio] = useState(profile?.bio ?? '');
   const [avatarUri, setAvatarUri] = useState<string | null>(profile?.avatar_url ?? null);
 
   // ─── Фильтр ──────────────────────────────────────────────────
-  const [filterAddress, setFilterAddress] = useState(filter?.center ?? [55.7519, 37.6173] as [number, number]);
+  const [filterAddress, setFilterAddress] = useState<[number, number]>(filter?.center ?? [0, 0]);
   const [radius, setRadius] = useState(String(filter?.radius ?? 10));
   const [selectedCategories, setSelectedCategories] = useState<number[]>(filter?.categories ?? []);
+
+  const sanitizeDigits = (value: string) => value.replace(/\D/g, '');
+  const areStringArraysEqual = (left: string[], right: string[]) => {
+    if (left.length !== right.length) return false;
+    return left.every((value, index) => value === right[index]);
+  };
+  const areNumberArraysEqual = (left: number[], right: number[]) => {
+    const sortedLeft = [...left].sort((a, b) => a - b);
+    const sortedRight = [...right].sort((a, b) => a - b);
+    if (sortedLeft.length !== sortedRight.length) return false;
+    return sortedLeft.every((value, index) => value === sortedRight[index]);
+  };
+
+  const hasProfileChanges =
+      name !== (profile?.name ?? '') ||
+      bio !== (profile?.bio ?? '') ||
+      avatarUri !== (profile?.avatar_url ?? null) ||
+      !areStringArraysEqual(languages, profile?.languages ?? []);
+
+  const isProfileSaveDisabled = isProfileUpdating || !name.trim() || !hasProfileChanges;
+
+  const hasFilterChanges =
+      filterAddress[0] !== (filter?.center?.[0] ?? 0) ||
+      filterAddress[1] !== (filter?.center?.[1] ?? 0) ||
+      Number(radius) !== Number(filter?.radius ?? 10) ||
+      !areNumberArraysEqual(selectedCategories, filter?.categories ?? []);
+
+  const isFilterSaveDisabled = isFilterUpdating || !radius.trim() || Number(radius) <= 0 || !hasFilterChanges;
 
   useEffect(() => {
     if (filter?.radius != null) {
@@ -237,7 +265,7 @@ export default function ProfileScreen() {
                             mode="contained"
                             onPress={handleSaveProfile}
                             loading={isProfileUpdating}
-                            disabled={isProfileUpdating}
+                            disabled={isProfileSaveDisabled}
                         >
                             Сохранить профиль
                         </Button>
@@ -267,7 +295,7 @@ export default function ProfileScreen() {
                     <View style={styles.tabContent}>
                       <AddressPicker
                           label="Адрес"
-                          placeholder="Москва"
+                          placeholder="Ввведите адрес"
                           value={filterAddress}
                           onChangeCoordinates={setFilterAddress}
                           onUseCurrentLocation={handleUseCurrentLocation}
@@ -278,7 +306,7 @@ export default function ProfileScreen() {
                           mode="outlined"
                           label="Радиус (км)"
                           value={radius}
-                          onChangeText={setRadius}
+                          onChangeText={(text) => setRadius(sanitizeDigits(text))}
                           keyboardType="numeric"
                           placeholder="10"
                       />
@@ -297,7 +325,7 @@ export default function ProfileScreen() {
                             mode="contained"
                             onPress={handleSaveFilter}
                             loading={isFilterUpdating}
-                            disabled={isFilterUpdating}
+                            disabled={isFilterSaveDisabled}
                         >
                             Сохранить фильтр
                         </Button>

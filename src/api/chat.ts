@@ -1,7 +1,7 @@
 // src/api/chat.ts — API для сообщений чата события
-import type {ApiResponse, SuccessResponse} from '../types';
-import type {ChatMessage, ChatMessageDTO, ChatMessageListResponse, ChatMessageUpdateDTO} from '@/types';
-import {apiClient} from './client';
+import type { ChatMessage, ChatMessageDTO, ChatMessageListResponse, ChatMessageUpdateDTO } from '@/types';
+import type { ApiResponse, SuccessResponse } from '../types';
+import { apiClient } from './client';
 
 export function getChatMessages(
     chatId: number,
@@ -27,7 +27,7 @@ export function updateChatMessage(
     dto: ChatMessageUpdateDTO,
 ): Promise<ApiResponse<ChatMessage>> {
     return apiClient
-        .put<ApiResponse<ChatMessage>>(`/chat/${chatId}/message/${messageId}`, dto)
+        .patch<ApiResponse<ChatMessage>>(`/chat/${chatId}/message/${messageId}`, dto)
         .then((response) => response.data);
 }
 

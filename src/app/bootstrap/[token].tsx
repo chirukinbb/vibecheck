@@ -1,14 +1,15 @@
 import Constants from 'expo-constants';
-import {useLocalSearchParams, useRouter} from 'expo-router';
-import {useEffect, useRef, useState} from 'react';
-import {ActivityIndicator, StyleSheet, Text, View} from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { Button, Modal, Portal, useTheme } from 'react-native-paper';
 
-import {requestDeviceFirebaseToken} from '@/lib/notifications';
-import {useAuthStore} from '@/stores/authStore';
-import {useCategoriesStore} from '@/stores/categoriesStore';
-import {useDeviceStore} from '@/stores/deviceStore';
-import {useLanguagesStore} from '@/stores/languagesStore';
-import {useTagsStore} from '@/stores/tagsStore';
+import { requestDeviceFirebaseToken } from '@/lib/notifications';
+import { useAuthStore } from '@/stores/authStore';
+import { useCategoriesStore } from '@/stores/categoriesStore';
+import { useDeviceStore } from '@/stores/deviceStore';
+import { useLanguagesStore } from '@/stores/languagesStore';
+import { useTagsStore } from '@/stores/tagsStore';
 
 export default function BootstrapScreen() {
     const {token} = useLocalSearchParams<{ token: string }>();
@@ -22,7 +23,9 @@ export default function BootstrapScreen() {
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [filterPopupVisible, setFilterPopupVisible] = useState(false);
     const didRunRef = useRef(false);
+    const theme = useTheme();
 
     const isEmptyValue = (val: unknown): boolean => {
         if (val === null || val === undefined) return true;
@@ -79,12 +82,13 @@ export default function BootstrapScreen() {
                     fetchTags()
                 ]);
 
-                // 5. Редирект только после того, как user-data реально заполнена
+                // 5. Если фильтр пустой, показываем popup с кнопкой, чтобы пользователь настроил его
                 if (currentUser.id != null && currentUser.profile && isFilterEmpty) {
-                    router.replace('/(tabs)/profile');
-                } else {
-                    router.replace('/(tabs)');
+                    setFilterPopupVisible(true);
+                    return;
                 }
+
+                router.replace('/(tabs)');
             } catch (e: any) {
                 setError(e?.message ?? 'Не удалось загрузить данные аккаунта');
                 setTimeout(() => {
@@ -102,6 +106,44 @@ export default function BootstrapScreen() {
 
     return (
         <View style={styles.container}>
+            <Portal>
+                <Modal
+                    visible={filterPopupVisible}
+                    onDismiss={() => {
+                        setFilterPopupVisible(false);
+                        router.replace('/(tabs)');
+                    }}
+                    contentContainerStyle={[styles.modal, {backgroundColor: theme.colors.surface}]}
+                >
+                    <Text style={[styles.modalTitle, {color: theme.colors.onSurface}]}>Настройте фильтр</Text>
+                    <Text style={[styles.modalText, {color: theme.colors.onSurfaceVariant}]}>
+                        Чтобы начать пользоваться событиями, задайте фильтры по вашим интересам и предпочтениям. Это поможет приложению показывать только актуальные и подходящие вам мероприятия.
+                    </Text>
+
+                    <View style={styles.modalActions}>
+                        <Button
+                            mode="text"
+                            onPress={() => {
+                                setFilterPopupVisible(false);
+                                router.replace('/(tabs)');
+                            }}
+                            textColor={theme.colors.onSurfaceVariant}
+                        >
+                            Позже
+                        </Button>
+                        <Button
+                            mode="contained"
+                            onPress={() => {
+                                setFilterPopupVisible(false);
+                                router.replace('/(tabs)/profile');
+                            }}
+                        >
+                            Настроить
+                        </Button>
+                    </View>
+                </Modal>
+            </Portal>
+
             {loading ? (
                 <>
                     <ActivityIndicator size="large"/>
@@ -138,5 +180,26 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#B91C1C',
         textAlign: 'center',
+    },
+    modal: {
+        margin: 24,
+        padding: 16,
+        borderRadius: 12,
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        marginBottom: 8,
+    },
+    modalText: {
+        fontSize: 14,
+        lineHeight: 20,
+        marginBottom: 12,
+    },
+    modalActions: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        gap: 8,
     },
 });

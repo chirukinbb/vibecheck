@@ -1,20 +1,20 @@
 // src/app/event/edit/[id].tsx — редактирование события
 import DateTimePicker from '@/components/date-time-picker';
-import {router, useLocalSearchParams} from 'expo-router';
-import {useEffect, useState} from 'react';
-import {Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View} from 'react-native';
-import {ActivityIndicator, Button, Surface, Text, TextInput, useTheme} from 'react-native-paper';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Button, Surface, Text, TextInput, useTheme } from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import {getCurrentCoordinates} from '@/api';
-import AddressPicker, {Coordinates} from '@/components/address-picker';
+import { getCurrentCoordinates } from '@/api';
+import AddressPicker, { Coordinates } from '@/components/address-picker';
 import ImagePickerWithCrop from '@/components/image-picker';
 import PageLayout from '@/components/page-layout';
 import SingleSelect from '@/components/single-select';
 import TagCloudInput from '@/components/tag-cloud-input';
-import {MaxContentWidth, Spacing} from '@/constants/theme';
-import {useCategoriesStore, useEventsStore} from '@/stores';
-import {useTagsStore} from '@/stores/tagsStore';
+import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { useCategoriesStore, useEventsStore } from '@/stores';
+import { useTagsStore } from '@/stores/tagsStore';
 
 export default function EditEventScreen() {
     const {id} = useLocalSearchParams<{ id: string }>();
@@ -44,6 +44,8 @@ export default function EditEventScreen() {
     const [tags, setTags] = useState<string[]>([]);
     const [thumbnail, setThumbnail] = useState<string | null>(null);
     const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+    const sanitizeDigits = (value: string) => value.replace(/\D/g, '');
 
     const reservedCount = Number(selectedEvent?.reserved ?? (Array.isArray(selectedEvent?.members) ? selectedEvent.members.length : 0));
     const slotsNumber = Number(slots || 0);
@@ -247,7 +249,7 @@ export default function EditEventScreen() {
                                 mode="outlined"
                                 label="Количество мест"
                                 value={slots}
-                                onChangeText={setSlots}
+                                onChangeText={(text) => setSlots(sanitizeDigits(text))}
                                 keyboardType="numeric"
                                 placeholder="20"
                             />
