@@ -1,10 +1,10 @@
 import {router, useLocalSearchParams} from 'expo-router';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {Alert, Dimensions, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View,} from 'react-native';
+import {Dimensions, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View,} from 'react-native';
 
 import {Bubble, GiftedChat, type IMessage, InputToolbar} from 'react-native-gifted-chat';
 
-import {Text, useTheme} from 'react-native-paper';
+import {Button, Modal, Portal, Text, useTheme} from 'react-native-paper';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import PageLayout from '@/components/page-layout';
@@ -67,6 +67,16 @@ export default function EventChatScreen() {
     const [composerText, setComposerText] = useState('');
     const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
     const [inputHeight, setInputHeight] = useState(MIN_INPUT_HEIGHT);
+    const [popup, setPopup] = useState<{
+        visible: boolean;
+        title: string;
+        message?: string;
+        actions: Array<{ text: string; onPress?: () => void | Promise<void>; style?: 'default' | 'cancel' | 'destructive' }>;
+    }>({
+        visible: false,
+        title: '',
+        actions: [],
+    });
 
     const messages = useMemo(() => mapChatMessages(chatMessages), [chatMessages]);
 
@@ -160,17 +170,29 @@ export default function EventChatScreen() {
         [chatMessages]
     );
 
+    const showPopup = useCallback(
+        (title: string, message?: string, actions: Array<{ text: string; onPress?: () => void | Promise<void>; style?: 'default' | 'cancel' | 'destructive' }> = []) => {
+            setPopup({visible: true, title, message, actions});
+        },
+        []
+    );
+
+    const hidePopup = useCallback(() => {
+        setPopup((prev) => ({...prev, visible: false}));
+    }, []);
+
     const handleDeleteMessage = useCallback(
         (messageId: string) => {
             if (!isEventIdValid) return;
 
-            Alert.alert('Удалить сообщение?', 'Это действие нельзя будет отменить.', [
-                {text: 'Отмена', style: 'cancel'},
+            showPopup('Удалить сообщение?', 'Это действие нельзя будет отменить.', [
+                {text: 'Отмена', style: 'cancel', onPress: hidePopup},
                 {
                     text: 'Удалить',
                     style: 'destructive',
                     onPress: async () => {
                         try {
+                            hidePopup();
                             await deleteMessage(eventId, Number(messageId));
 
                             // если удалили сообщение, которое как раз редактировали
@@ -178,21 +200,19 @@ export default function EventChatScreen() {
                                 cancelEditing();
                             }
                         } catch {
-                            Alert.alert('Ошибка', 'Не удалось удалить сообщение');
+                            showPopup('Ошибка', 'Не удалось удалить сообщение', [
+                                {text: 'Закрыть', onPress: hidePopup},
+                            ]);
                         }
                     },
                 },
             ]);
         },
-        [cancelEditing, deleteMessage, editingMessageId, eventId, isEventIdValid]
+        [cancelEditing, deleteMessage, editingMessageId, eventId, hidePopup, isEventIdValid, showPopup]
     );
 
-    /**
-     * Долгий тап: меню показываем только для своих сообщений.
-     * GiftedChat передаёт IMessage, а серверные сообщения имеют author.id.
-     */
-    const handleLongPress = useCallback(
-        (_context: unknown, message?: unknown) => {
+    const openMessageActions = useCallback(
+        (message?: unknown) => {
             if (currentUserId == null || !message) return;
 
             const typedMessage = message as Partial<IMessage> & {
@@ -206,10 +226,8 @@ export default function EventChatScreen() {
 
             const messageId = String(typedMessage._id ?? typedMessage.id ?? '');
             if (!messageId) return;
-            console.log('handleLongPress', {message, currentUserId});
 
-
-            Alert.alert('Сообщение', undefined, [
+            showPopup('Сообщение', undefined, [
                 {
                     text: 'Редактировать',
                     onPress: () => handleEditMessage(messageId),
@@ -219,10 +237,30 @@ export default function EventChatScreen() {
                     style: 'destructive',
                     onPress: () => handleDeleteMessage(messageId),
                 },
-                {text: 'Отмена', style: 'cancel'},
+                {text: 'Отмена', style: 'cancel', onPress: hidePopup},
             ]);
         },
-        [currentUserId, handleDeleteMessage, handleEditMessage]
+        [currentUserId, handleDeleteMessage, handleEditMessage, hidePopup, showPopup]
+    );
+
+    /**
+     * Долгий тап: меню показываем только для своих сообщений.
+     * GiftedChat передаёт IMessage, а серверные сообщения имеют author.id.
+     */
+    const handleLongPress = useCallback(
+        (_context: unknown, message?: unknown) => {
+            openMessageActions(message);
+        },
+        [openMessageActions]
+    );
+
+    const handleWebContextMenu = useCallback(
+        (event: { preventDefault?: () => void }, message?: unknown) => {
+            if (Platform.OS !== 'web') return;
+            event?.preventDefault?.();
+            openMessageActions(message);
+        },
+        [openMessageActions]
     );
 
     /* ------------------------------ отправка ------------------------------ */
@@ -253,11 +291,12 @@ export default function EventChatScreen() {
             // возвращаем текст, чтобы пользователь не потерял его
             setComposerText(text);
             setEditingMessageId(editId);
-            Alert.alert(
+            showPopup(
                 'Ошибка',
                 editId !== null
                     ? 'Не удалось сохранить изменения'
-                    : 'Не удалось отправить сообщение'
+                    : 'Не удалось отправить сообщение',
+                [{text: 'Закрыть', onPress: hidePopup}]
             );
         }
     }, [
@@ -268,7 +307,9 @@ export default function EventChatScreen() {
         editingMessageId,
         eventId,
         isEventIdValid,
+        hidePopup,
         sendMessage,
+        showPopup,
     ]);
 
     const handleInputContentSizeChange = useCallback(
@@ -289,6 +330,57 @@ export default function EventChatScreen() {
             icon="arrow-left"
             onIconPress={() => router.back()}
         >
+            <Portal>
+                <Modal
+                    visible={popup.visible}
+                    onDismiss={hidePopup}
+                    contentContainerStyle={[
+                        styles.popupContainer,
+                        {backgroundColor: theme.colors.surface},
+                    ]}
+                >
+                    <Text variant="titleMedium" style={[styles.popupTitle, {color: theme.colors.onSurface}]}>
+                        {popup.title}
+                    </Text>
+                    {popup.message ? (
+                        <Text variant="bodyMedium"
+                              style={[styles.popupMessage, {color: theme.colors.onSurfaceVariant}]}>
+                            {popup.message}
+                        </Text>
+                    ) : null}
+                    <View style={styles.popupActions}>
+                        {popup.actions.map((action) => (
+                            <Button
+                                key={action.text}
+                                mode={action.style === 'destructive' ? 'contained' : 'text'}
+                                onPress={async () => {
+                                    hidePopup();
+                                    if (action.onPress) {
+                                        await action.onPress();
+                                    }
+                                }}
+                                textColor={
+                                    action.style === 'destructive'
+                                        ? theme.colors.onPrimary
+                                        : action.style === 'cancel'
+                                            ? theme.colors.onSurfaceVariant
+                                            : theme.colors.primary
+                                }
+                                buttonColor={
+                                    action.style === 'destructive'
+                                        ? theme.colors.error
+                                        : action.style === 'cancel'
+                                            ? 'transparent'
+                                            : 'transparent'
+                                }
+                            >
+                                {action.text}
+                            </Button>
+                        ))}
+                    </View>
+                </Modal>
+            </Portal>
+
             <KeyboardAvoidingView
                 style={styles.flexOne}
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -301,6 +393,7 @@ export default function EventChatScreen() {
                         text={composerText}
                         onLongPressMessage={handleLongPress}
                         isUserAvatarVisible
+                        isInverted={false}
                         keyboardAvoidingViewProps={{
                             keyboardVerticalOffset: headerHeight + bottomInset,
                         }}
@@ -401,50 +494,70 @@ export default function EventChatScreen() {
                                 ]}
                             />
                         )}
-                        renderBubble={(bubbleProps) => (
-                            <Bubble
-                                {...bubbleProps}
-                                onLongPressMessage={handleLongPress}
-                                touchableProps={{
-                                    delayLongPress: 450,
-                                }}
-                                usernameStyle={{
-                                    color: theme.colors.primary,
-                                    fontSize: 12,
-                                    fontWeight: '600',
-                                    marginBottom: 2,
-                                    maxWidth: MAX_BUBBLE_WIDTH,
-                                }}
-                                containerStyle={{
-                                    left: {maxWidth: MAX_BUBBLE_WIDTH, marginVertical: 4},
-                                    right: {maxWidth: MAX_BUBBLE_WIDTH, marginVertical: 4},
-                                }}
-                                wrapperStyle={{
-                                    left: {
-                                        backgroundColor: theme.colors.surfaceVariant,
-                                        borderRadius: 18,
-                                        borderBottomLeftRadius: 4,
-                                    },
-                                    right: {
-                                        backgroundColor: theme.colors.primary,
-                                        borderRadius: 18,
-                                        borderBottomRightRadius: 4,
-                                    },
-                                }}
-                                textStyle={{
-                                    left: {
-                                        color: theme.colors.onSurfaceVariant,
-                                        fontSize: 15,
-                                        lineHeight: 20,
-                                    },
-                                    right: {
-                                        color: theme.colors.onPrimary,
-                                        fontSize: 15,
-                                        lineHeight: 20,
-                                    },
-                                }}
-                            />
-                        )}
+                        renderBubble={(bubbleProps) => {
+                            const currentMessage = bubbleProps.currentMessage as
+                                | (Partial<IMessage> & {
+                                id?: number | string;
+                                author?: { id?: number | string };
+                                user?: { _id?: number | string };
+                            })
+                                | undefined;
+
+                            const ContextMenuWrapper = Pressable as unknown as React.ComponentType<any>;
+
+                            return (
+                                <ContextMenuWrapper
+                                    onContextMenu={(event: any) => {
+                                        if (Platform.OS === 'web') {
+                                            handleWebContextMenu(event, currentMessage);
+                                        }
+                                    }}
+                                >
+                                    <Bubble
+                                        {...bubbleProps}
+                                        onLongPressMessage={handleLongPress}
+                                        touchableProps={{
+                                            delayLongPress: 450,
+                                        }}
+                                        usernameStyle={{
+                                            color: theme.colors.primary,
+                                            fontSize: 12,
+                                            fontWeight: '600',
+                                            marginBottom: 2,
+                                            maxWidth: MAX_BUBBLE_WIDTH,
+                                        }}
+                                        containerStyle={{
+                                            left: {maxWidth: MAX_BUBBLE_WIDTH, marginVertical: 4},
+                                            right: {maxWidth: MAX_BUBBLE_WIDTH, marginVertical: 4},
+                                        }}
+                                        wrapperStyle={{
+                                            left: {
+                                                backgroundColor: theme.colors.surfaceVariant,
+                                                borderRadius: 18,
+                                                borderBottomLeftRadius: 4,
+                                            },
+                                            right: {
+                                                backgroundColor: theme.colors.primary,
+                                                borderRadius: 18,
+                                                borderBottomRightRadius: 4,
+                                            },
+                                        }}
+                                        textStyle={{
+                                            left: {
+                                                color: theme.colors.onSurfaceVariant,
+                                                fontSize: 15,
+                                                lineHeight: 20,
+                                            },
+                                            right: {
+                                                color: theme.colors.onPrimary,
+                                                fontSize: 15,
+                                                lineHeight: 20,
+                                            },
+                                        }}
+                                    />
+                                </ContextMenuWrapper>
+                            );
+                        }}
                         renderSend={() => (
                             <Pressable
                                 onPress={() => void submit()}
@@ -515,6 +628,27 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: '600',
         marginBottom: 2,
+    },
+    popupContainer: {
+        margin: 24,
+        padding: 16,
+        borderRadius: 12,
+    },
+    popupTitle: {
+        marginBottom: 8,
+        fontSize: 18,
+        fontWeight: '600',
+    },
+    popupMessage: {
+        marginBottom: 12,
+        lineHeight: 20,
+    },
+    popupActions: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: 8,
     },
 
     composer: {
