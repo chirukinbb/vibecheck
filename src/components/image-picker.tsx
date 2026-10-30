@@ -2,8 +2,10 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import {setStatusBarStyle} from 'expo-status-bar';
 import {type ReactNode, useState} from 'react';
-import {Modal, Pressable, StyleSheet, Text, View} from 'react-native';
+import {StyleSheet, View} from 'react-native';
 import {Button, useTheme} from 'react-native-paper';
+
+import AppPopup from './app-popup';
 
 interface ImagePickerProps {
   aspect: [number, number];
@@ -107,41 +109,36 @@ export default function ImagePickerWithCrop({
       <>
         {children({open: openModal})}
 
-        <Modal
+        <AppPopup
             visible={visible}
-            transparent
-            animationType="slide"
-            onRequestClose={closeModal}
-        >
-          <Pressable style={styles.overlay} onPress={closeModal}>
-            <Pressable style={[styles.sheet, {backgroundColor: theme.colors.surface}]} onPress={() => {
-            }}>
-              <View style={styles.handle}/>
-              <Text style={[styles.title, {color: theme.colors.onSurface}]}>{title}</Text>
-              <Button
-                  mode="contained"
-                  onPress={pickFromGallery}
-                  style={styles.button}
-                  icon="image"
-                  loading={loading}
-              >
-                Галерея
-              </Button>
-              <Button
-                  mode="contained"
-                  onPress={takePhoto}
-                  style={styles.button}
-                  icon="camera"
-                  loading={loading}
-              >
-                Камера
-              </Button>
-              <Button mode="text" onPress={closeModal} style={styles.closeButton}>
-                Отмена
-              </Button>
-            </Pressable>
-          </Pressable>
-        </Modal>
+            onDismiss={closeModal}
+            header={title}
+            body={
+              <>
+                <View style={styles.handle}/>
+                <Button
+                    mode="contained"
+                    onPress={pickFromGallery}
+                    style={styles.button}
+                    icon="image"
+                    loading={loading}
+                >
+                  Галерея
+                </Button>
+                <Button
+                    mode="contained"
+                    onPress={takePhoto}
+                    style={styles.button}
+                    icon="camera"
+                    loading={loading}
+                >
+                  Камера
+                </Button>
+              </>
+            }
+            actions={[{label: 'Отмена', onPress: closeModal, mode: 'text'}]}
+            style={[styles.sheet, {backgroundColor: theme.colors.surface}]}
+        />
       </>
   );
 }

@@ -1,17 +1,19 @@
 // src/components/multi-select.tsx — мультиселект с поиском
 import {useState} from 'react';
 import {ScrollView, StyleSheet, View} from 'react-native';
-import {Button, Chip, Modal, Portal, Searchbar, Text, useTheme,} from 'react-native-paper';
+import {Button, Chip, Searchbar, Text, useTheme,} from 'react-native-paper';
+
+import AppPopup from './app-popup';
 
 interface Option<T> {
-  code: T;
-  label: string;
+    code: T;
+    label: string;
 }
 
 interface MultiSelectProps<T> {
-  options: Option<T>[];
-  selected: T[];
-  onChange: (selected: T[]) => void;
+    options: Option<T>[];
+    selected: T[];
+    onChange: (selected: T[]) => void;
   label: string;
 }
 
@@ -80,77 +82,69 @@ export default function MultiSelect<T>({
           <Button
               mode="outlined"
               onPress={() => {
-                setQuery('');
-                setVisible(true);
+                  setQuery('');
+                  setVisible(true);
               }}
               style={styles.addButton}
           >
-            + Добавить
+              + Добавить
           </Button>
-        </View>
+            </View>
 
-        <Portal>
-          <Modal
-              visible={visible}
-              onDismiss={() => setVisible(false)}
-              contentContainerStyle={[
-                styles.modal,
-                {backgroundColor: theme.colors.surface},
-              ]}
-          >
-              <Searchbar
-                  placeholder="Поиск..."
-                  value={query}
-                  onChangeText={setQuery}
-                  style={styles.searchbar}
-                  autoFocus
-              />
+            <AppPopup
+                visible={visible}
+                onDismiss={() => setVisible(false)}
+                header={label}
+                body={
+                    <>
+                        <Searchbar
+                            placeholder="Поиск..."
+                            value={query}
+                            onChangeText={setQuery}
+                            style={styles.searchbar}
+                            autoFocus
+                        />
 
-              {filtered.length > 0 && (
-                  <Button
-                      mode="text"
-                      compact
-                      onPress={toggleAllFiltered}
-                      style={styles.toggleAllButton}
-                      labelStyle={styles.toggleAllLabel}
-                  >
-                      {allFilteredSelected ? 'Снять выделение' : 'Выбрать все'}
-                  </Button>
-              )}
+                        {filtered.length > 0 && (
+                            <Button
+                                mode="text"
+                                compact
+                                onPress={toggleAllFiltered}
+                                style={styles.toggleAllButton}
+                                labelStyle={styles.toggleAllLabel}
+                            >
+                                {allFilteredSelected ? 'Снять выделение' : 'Выбрать все'}
+                            </Button>
+                        )}
 
-              <ScrollView style={styles.list} nestedScrollEnabled>
-                  {filtered.length === 0 && (
-                      <Text style={styles.emptyText}>Ничего не найдено</Text>
-                  )}
-                  {filtered.map((opt, index) => (
-                      <Chip
-                          key={`${String(opt.code)}-${index}`}
-                          selected={selected.includes(opt.code)}
-                          onPress={() => toggleOption(opt.code)}
-                      style={[
-                        styles.modalChip,
-                        {
-                          backgroundColor: selected.includes(opt.code)
-                              ? theme.colors.surfaceVariant
-                              : theme.colors.surface,
-                        },
-                      ]}
-                      showSelectedOverlay
-                  >
-                    {opt.label}
-                  </Chip>
-              ))}
-            </ScrollView>
-
-            <Button
-                mode="contained"
-                onPress={() => setVisible(false)}
-                style={styles.doneButton}
-            >
-              Готово
-            </Button>
-          </Modal>
-        </Portal>
+                        <ScrollView style={styles.list} nestedScrollEnabled>
+                            {filtered.length === 0 && (
+                                <Text style={styles.emptyText}>Ничего не найдено</Text>
+                            )}
+                            {filtered.map((opt, index) => (
+                                <Chip
+                                    key={`${String(opt.code)}-${index}`}
+                                    selected={selected.includes(opt.code)}
+                                    onPress={() => toggleOption(opt.code)}
+                                    style={[
+                                        styles.modalChip,
+                                        {
+                                            backgroundColor: selected.includes(opt.code)
+                                                ? theme.colors.surfaceVariant
+                                                : theme.colors.surface,
+                                        },
+                                    ]}
+                                    showSelectedOverlay
+                                >
+                                    {opt.label}
+                                </Chip>
+                            ))}
+                        </ScrollView>
+                    </>
+                }
+                actions={[{label: 'Готово', onPress: () => setVisible(false), mode: 'contained'}]}
+                style={[styles.modal, {backgroundColor: theme.colors.surface}]}
+            />
       </View>
   );
 }

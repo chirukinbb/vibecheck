@@ -1,7 +1,9 @@
 // src/components/single-select.tsx — одиночный селектор с поиском
 import {useState} from 'react';
 import {ScrollView, StyleSheet, View} from 'react-native';
-import {Button, Chip, Modal, Portal, Searchbar, Text, useTheme,} from 'react-native-paper';
+import {Button, Chip, Searchbar, Text, useTheme,} from 'react-native-paper';
+
+import AppPopup from './app-popup';
 
 interface Option<T> {
     code: T;
@@ -53,56 +55,48 @@ export default function SingleSelect<T>({options, selected, onChange, label,}: S
                 </Button>
             </View>
 
-            <Portal>
-                <Modal
-                    visible={visible}
-                    onDismiss={() => setVisible(false)}
-                    contentContainerStyle={[
-                        styles.modal,
-                        {backgroundColor: theme.colors.surface},
-                    ]}
-                >
-                    <Searchbar
-                        placeholder="Поиск..."
-                        value={query}
-                        onChangeText={setQuery}
-                        style={styles.searchbar}
-                        autoFocus
-                    />
+            <AppPopup
+                visible={visible}
+                onDismiss={() => setVisible(false)}
+                header={label}
+                body={
+                    <>
+                        <Searchbar
+                            placeholder="Поиск..."
+                            value={query}
+                            onChangeText={setQuery}
+                            style={styles.searchbar}
+                            autoFocus
+                        />
 
-                    <ScrollView style={styles.list} nestedScrollEnabled>
-                        {filtered.length === 0 && (
-                            <Text style={styles.emptyText}>Ничего не найдено</Text>
-                        )}
-                        {filtered.map((opt, index) => (
-                            <Chip
-                                key={`${String(opt.code)}-${index}`}
-                                selected={selected === opt.code}
-                                onPress={() => select(opt.code)}
-                                style={[
-                                    styles.modalChip,
-                                    {
-                                        backgroundColor: selected === opt.code
-                                            ? theme.colors.surfaceVariant
-                                            : theme.colors.surface,
-                                    },
-                                ]}
-                                showSelectedOverlay
-                            >
-                                {opt.label}
-                            </Chip>
-                        ))}
-                    </ScrollView>
-
-                    <Button
-                        mode="contained"
-                        onPress={() => setVisible(false)}
-                        style={styles.doneButton}
-                    >
-                        Закрыть
-                    </Button>
-                </Modal>
-            </Portal>
+                        <ScrollView style={styles.list} nestedScrollEnabled>
+                            {filtered.length === 0 && (
+                                <Text style={styles.emptyText}>Ничего не найдено</Text>
+                            )}
+                            {filtered.map((opt, index) => (
+                                <Chip
+                                    key={`${String(opt.code)}-${index}`}
+                                    selected={selected === opt.code}
+                                    onPress={() => select(opt.code)}
+                                    style={[
+                                        styles.modalChip,
+                                        {
+                                            backgroundColor: selected === opt.code
+                                                ? theme.colors.surfaceVariant
+                                                : theme.colors.surface,
+                                        },
+                                    ]}
+                                    showSelectedOverlay
+                                >
+                                    {opt.label}
+                                </Chip>
+                            ))}
+                        </ScrollView>
+                    </>
+                }
+                actions={[{label: 'Закрыть', onPress: () => setVisible(false), mode: 'contained'}]}
+                style={[styles.modal, {backgroundColor: theme.colors.surface}]}
+            />
         </View>
     );
 }

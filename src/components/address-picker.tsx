@@ -1,9 +1,10 @@
 // src/components/address-picker.tsx — адрес с модальным выбором и подсказками
 import {useEffect, useRef, useState} from 'react';
 import {Pressable, ScrollView, StyleSheet, View} from 'react-native';
-import {ActivityIndicator, Modal, Portal, Searchbar, Text, TextInput, useTheme} from 'react-native-paper';
+import {ActivityIndicator, Searchbar, Text, TextInput, useTheme} from 'react-native-paper';
 
 import {AddressSuggestion, Coordinates, fetchAddressSuggestions, getAddressFromCoordinates,} from '@/api';
+import AppPopup from './app-popup';
 
 export type {Coordinates};
 
@@ -129,49 +130,52 @@ export default function AddressPicker({
           />
         </Pressable>
 
-        <Portal>
-          <Modal
-              visible={visible}
-              onDismiss={() => setVisible(false)}
-              contentContainerStyle={[styles.modal, {backgroundColor: theme.colors.surface}]}
-          >
-            <Searchbar
-                placeholder="Начните вводить адрес..."
-                value={inputText}
-                onChangeText={setInputText}
-                style={styles.searchbar}
-                autoFocus
-            />
+        <AppPopup
+            visible={visible}
+            onDismiss={() => setVisible(false)}
+            header={label}
+            body={
+              <>
+                <Searchbar
+                    placeholder="Начните вводить адрес..."
+                    value={inputText}
+                    onChangeText={setInputText}
+                    style={styles.searchbar}
+                    autoFocus
+                />
 
-            {loading ? (
-                <View style={styles.loadingRow}>
-                  <ActivityIndicator animating size="small"/>
-                  <Text style={styles.loadingText}>Ищем адреса...</Text>
-                </View>
-            ) : null}
+                {loading ? (
+                    <View style={styles.loadingRow}>
+                      <ActivityIndicator animating size="small"/>
+                      <Text style={styles.loadingText}>Ищем адреса...</Text>
+                    </View>
+                ) : null}
 
-            <ScrollView style={styles.list} nestedScrollEnabled>
-              {!loading && suggestions.length === 0 && inputText.trim().length >= 2 ? (
-                  <Text style={styles.emptyText}>{errorText || 'Подходящих вариантов нет'}</Text>
-              ) : null}
+                <ScrollView style={styles.list} nestedScrollEnabled>
+                  {!loading && suggestions.length === 0 && inputText.trim().length >= 2 ? (
+                      <Text style={styles.emptyText}>{errorText || 'Подходящих вариантов нет'}</Text>
+                  ) : null}
 
-              {suggestions.map((suggestion) => (
-                  <Pressable
-                      key={suggestion.id}
-                      onPress={() => handleSelectSuggestion(suggestion)}
-                      style={({pressed}) => [
-                        styles.suggestion,
-                        pressed && styles.suggestionPressed,
-                      ]}
-                  >
-                    <Text style={styles.suggestionTitle}>{suggestion.label}</Text>
-                  </Pressable>
-              ))}
-            </ScrollView>
+                  {suggestions.map((suggestion) => (
+                      <Pressable
+                          key={suggestion.id}
+                          onPress={() => handleSelectSuggestion(suggestion)}
+                          style={({pressed}) => [
+                            styles.suggestion,
+                            pressed && styles.suggestionPressed,
+                          ]}
+                      >
+                        <Text style={styles.suggestionTitle}>{suggestion.label}</Text>
+                      </Pressable>
+                  ))}
+                </ScrollView>
 
-            <Text style={styles.hint}>Выберите вариант, чтобы подставить адрес в поле</Text>
-          </Modal>
-        </Portal>
+                <Text style={styles.hint}>Выберите вариант, чтобы подставить адрес в поле</Text>
+              </>
+            }
+            actions={[{label: 'Закрыть', onPress: () => setVisible(false), mode: 'contained'}]}
+            style={[styles.modal, {backgroundColor: theme.colors.surface}]}
+        />
       </View>
   );
 }

@@ -3,19 +3,22 @@ import AddressPicker from '@/components/address-picker';
 import ImagePickerWithCrop from '@/components/image-picker';
 import MultiSelect from '@/components/multi-select';
 import PageLayout from '@/components/page-layout';
-import { AVAILABLE_LANGUAGES } from '@/constants/mock-data';
-import { MaxContentWidth, Spacing } from '@/constants/theme';
-import { useAuthStore, useCategoriesStore, useFilterStore, useProfileStore } from '@/stores';
-import { useSettingsStore } from '@/stores/settingsStore';
+import {AVAILABLE_LANGUAGES} from '@/constants/mock-data';
+import {MaxContentWidth, Spacing} from '@/constants/theme';
+import {isFilterEmpty} from '@/lib/filter';
+import {useAuthStore, useCategoriesStore, useFilterStore, useProfileStore} from '@/stores';
+import {useSettingsStore} from '@/stores/settingsStore';
 import * as Location from 'expo-location';
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { Avatar, Button, SegmentedButtons, Surface, Text, TextInput, useTheme } from 'react-native-paper';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {router, useLocalSearchParams} from 'expo-router';
+import {useEffect, useState} from 'react';
+import {KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View} from 'react-native';
+import {Avatar, Button, SegmentedButtons, Surface, Text, TextInput, useTheme} from 'react-native-paper';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 export default function ProfileScreen() {
-  const theme = useTheme();
+    const theme = useTheme();
+    const {redirectAfterSave} = useLocalSearchParams<{ redirectAfterSave?: string }>();
+    const shouldRedirectToFeedAfterSave = redirectAfterSave === '1';
     const themeMode = useSettingsStore((state) => state.themeMode);
     const setThemeMode = useSettingsStore((state) => state.setThemeMode);
     const profile = useAuthStore((state) => state.profile);
@@ -50,7 +53,8 @@ export default function ProfileScreen() {
   // ─── Фильтр ──────────────────────────────────────────────────
   const [filterAddress, setFilterAddress] = useState<[number, number]>(filter?.center ?? [0, 0]);
   const [radius, setRadius] = useState(String(filter?.radius ?? 10));
-  const [selectedCategories, setSelectedCategories] = useState<number[]>(filter?.categories ?? []);
+    const [selectedCategories, setSelectedCategories] = useState<number[]>(filter?.categories ?? []);
+    const isFilterTabMarked = isFilterEmpty(filter);
 
   const sanitizeDigits = (value: string) => value.replace(/\D/g, '');
   const areStringArraysEqual = (left: string[], right: string[]) => {
@@ -109,6 +113,7 @@ export default function ProfileScreen() {
 
   const handleSaveFilter = async () => {
       const nextRadius = Number(radius) || 10;
+      const wasFilterEmpty = isFilterEmpty(filter);
       setFilterFeedback(null);
       try {
           const message = await saveFilter({
@@ -119,6 +124,16 @@ export default function ProfileScreen() {
 
           if (message) {
               setFilterFeedback({type: 'success', text: String(message)});
+          }
+
+          const nextFilter = {
+              center: filterAddress,
+              radius: nextRadius,
+              categories: selectedCategories,
+          };
+
+          if (wasFilterEmpty && !isFilterEmpty(nextFilter) && shouldRedirectToFeedAfterSave) {
+              router.replace('/(tabs)');
           }
       } catch (e: any) {
           setFilterFeedback({type: 'error', text: e?.message ?? 'Ошибка при сохранении фильтра'});
@@ -229,9 +244,12 @@ export default function ProfileScreen() {
                     onValueChange={(v) => setActiveTab(v as 'profile' | 'filter' | 'settings')}
                     style={styles.segmented}
                     buttons={[
-                      {value: 'profile', label: 'Профиль'},
-                      {value: 'filter', label: 'Фильтр'},
-                      {value: 'settings', label: 'Настройки'},
+                        {value: 'profile', label: 'Профиль'},
+                        {
+                            value: 'filter',
+                            label: isFilterTabMarked ? 'Фильтр ⚠' : 'Фильтр',
+                        },
+                        {value: 'settings', label: 'Настройки'},
                     ]}
                 />
 

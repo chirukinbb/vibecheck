@@ -1,15 +1,18 @@
 import Constants from 'expo-constants';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { Button, Modal, Portal, useTheme } from 'react-native-paper';
+import {useLocalSearchParams, useRouter} from 'expo-router';
+import {useEffect, useRef, useState} from 'react';
+import {ActivityIndicator, StyleSheet, Text, View} from 'react-native';
+import {useTheme} from 'react-native-paper';
 
-import { requestDeviceFirebaseToken } from '@/lib/notifications';
-import { useAuthStore } from '@/stores/authStore';
-import { useCategoriesStore } from '@/stores/categoriesStore';
-import { useDeviceStore } from '@/stores/deviceStore';
-import { useLanguagesStore } from '@/stores/languagesStore';
-import { useTagsStore } from '@/stores/tagsStore';
+import AppPopup from '@/components/app-popup';
+
+import {isFilterEmpty} from '@/lib/filter';
+import {requestDeviceFirebaseToken} from '@/lib/notifications';
+import {useAuthStore} from '@/stores/authStore';
+import {useCategoriesStore} from '@/stores/categoriesStore';
+import {useDeviceStore} from '@/stores/deviceStore';
+import {useLanguagesStore} from '@/stores/languagesStore';
+import {useTagsStore} from '@/stores/tagsStore';
 
 export default function BootstrapScreen() {
     const {token} = useLocalSearchParams<{ token: string }>();
@@ -26,14 +29,6 @@ export default function BootstrapScreen() {
     const [filterPopupVisible, setFilterPopupVisible] = useState(false);
     const didRunRef = useRef(false);
     const theme = useTheme();
-
-    const isEmptyValue = (val: unknown): boolean => {
-        if (val === null || val === undefined) return true;
-        if (typeof val === 'string') return val.trim() === '';
-        if (Array.isArray(val)) return val.length === 0;
-        if (typeof val === 'object') return Object.keys(val as object).length === 0;
-        return false;
-    };
 
     const getCurrentUserState = () => {
         const state = useAuthStore.getState();
@@ -65,7 +60,7 @@ export default function BootstrapScreen() {
 
                 // 2. После логина проверяем актуальные поля auth-store, а не старое состояние до запроса
                 const filter = currentUser.filter;
-                const isFilterEmpty = !filter || Object.values(filter).every(isEmptyValue);
+                const hasEmptyFilter = isFilterEmpty(filter);
 
                 const deviceToken = await requestDeviceFirebaseToken();
                 if (deviceToken) {
@@ -83,7 +78,7 @@ export default function BootstrapScreen() {
                 ]);
 
                 // 5. Если фильтр пустой, показываем popup с кнопкой, чтобы пользователь настроил его
-                if (currentUser.id != null && currentUser.profile && isFilterEmpty) {
+                if (currentUser.id != null && currentUser.profile && hasEmptyFilter) {
                     setFilterPopupVisible(true);
                     return;
                 }
@@ -106,43 +101,43 @@ export default function BootstrapScreen() {
 
     return (
         <View style={styles.container}>
-            <Portal>
-                <Modal
-                    visible={filterPopupVisible}
-                    onDismiss={() => {
-                        setFilterPopupVisible(false);
-                        router.replace('/(tabs)');
-                    }}
-                    contentContainerStyle={[styles.modal, {backgroundColor: theme.colors.surface}]}
-                >
-                    <Text style={[styles.modalTitle, {color: theme.colors.onSurface}]}>Настройте фильтр</Text>
+            <AppPopup
+                visible={filterPopupVisible}
+                onDismiss={() => {
+                    setFilterPopupVisible(false);
+                    router.replace('/(tabs)');
+                }}
+                header="Выберите свои интересы"
+                body={
                     <Text style={[styles.modalText, {color: theme.colors.onSurfaceVariant}]}>
-                        Чтобы начать пользоваться событиями, задайте фильтры по вашим интересам и предпочтениям. Это поможет приложению показывать только актуальные и подходящие вам мероприятия.
+                        Чтобы находить интересные события и тусовки рядом с вами, укажите свои предпочтения. Это займет
+                        всего пару секунд!
                     </Text>
-
-                    <View style={styles.modalActions}>
-                        <Button
-                            mode="text"
-                            onPress={() => {
-                                setFilterPopupVisible(false);
-                                router.replace('/(tabs)');
-                            }}
-                            textColor={theme.colors.onSurfaceVariant}
-                        >
-                            Позже
-                        </Button>
-                        <Button
-                            mode="contained"
-                            onPress={() => {
-                                setFilterPopupVisible(false);
-                                router.replace('/(tabs)/profile');
-                            }}
-                        >
-                            Настроить
-                        </Button>
-                    </View>
-                </Modal>
-            </Portal>
+                }
+                actions={[
+                    {
+                        label: 'Пропустить',
+                        onPress: () => {
+                            setFilterPopupVisible(false);
+                            router.replace('/(tabs)');
+                        },
+                        mode: 'text',
+                        textColor: theme.colors.onSurfaceVariant,
+                    },
+                    {
+                        label: 'Выбрать интересы',
+                        onPress: () => {
+                            setFilterPopupVisible(false);
+                            router.replace({
+                                pathname: '/(tabs)/profile',
+                                params: {redirectAfterSave: '1'},
+                            });
+                        },
+                        mode: 'contained',
+                    },
+                ]}
+                style={[styles.modal, {backgroundColor: theme.colors.surface}]}
+            />
 
             {loading ? (
                 <>

@@ -1,6 +1,7 @@
 import {useMemo, useState} from 'react';
 import {Keyboard, ScrollView, StyleSheet, View} from 'react-native';
-import {Button, Chip, Modal, Portal, Searchbar, Text, useTheme,} from 'react-native-paper';
+import {Button, Chip, Searchbar, Text, useTheme,} from 'react-native-paper';
+import AppPopup from './app-popup';
 
 type SuggestedTag = string | { id?: number | string; name?: string };
 
@@ -140,108 +141,108 @@ export default function TagCloudInput({value, onChange, suggestedTags = []}: Tag
                 </View>
             )}
 
-            <Portal>
-                <Modal
-                    visible={modalVisible}
-                    onDismiss={closeModal}
-                    contentContainerStyle={[
-                        styles.modal,
-                        {backgroundColor: theme.colors.surface},
-                    ]}
-                >
-                    <Searchbar
-                        placeholder="Поиск..."
-                        value={query}
-                        onChangeText={setQuery}
-                        onSubmitEditing={handleSubmit}
-                        returnKeyType="done"
-                        blurOnSubmit={false}
-                        maxLength={MAX_TAG_LENGTH + 1}
-                        style={styles.searchbar}
-                        autoFocus
-                    />
+            <AppPopup
+                visible={modalVisible}
+                onDismiss={closeModal}
+                header={
+                    <Text variant="titleMedium" style={{color: theme.colors.onSurface}}>
+                        Выберите теги
+                    </Text>
+                }
+                body={
+                    <>
+                        <Searchbar
+                            placeholder="Поиск..."
+                            value={query}
+                            onChangeText={setQuery}
+                            onSubmitEditing={handleSubmit}
+                            returnKeyType="done"
+                            blurOnSubmit={false}
+                            maxLength={MAX_TAG_LENGTH + 1}
+                            style={styles.searchbar}
+                            autoFocus
+                        />
 
-                    {value.length > 0 && (
-                        <View style={styles.selectedBlock}>
-                            <Text variant="labelMedium" style={{color: theme.colors.onSurfaceVariant}}>
-                                Выбрано
-                            </Text>
-                            <View style={styles.chipRow}>
-                                {value.map((tag) => (
-                                    <Chip
-                                        key={tag}
-                                        onClose={() => toggleTag(tag)}
-                                        style={styles.chip}
-                                        compact
-                                    >
-                                        #{tag}
-                                    </Chip>
-                                ))}
+                        {value.length > 0 && (
+                            <View style={styles.selectedBlock}>
+                                <Text variant="labelMedium" style={{color: theme.colors.onSurfaceVariant}}>
+                                    Выбрано
+                                </Text>
+                                <View style={styles.chipRow}>
+                                    {value.map((tag) => (
+                                        <Chip
+                                            key={tag}
+                                            onClose={() => toggleTag(tag)}
+                                            style={styles.chip}
+                                            compact
+                                        >
+                                            #{tag}
+                                        </Chip>
+                                    ))}
+                                </View>
                             </View>
-                        </View>
-                    )}
-
-                    <ScrollView
-                        style={styles.list}
-                        keyboardShouldPersistTaps="handled"
-                        nestedScrollEnabled
-                        contentContainerStyle={styles.listContent}
-                    >
-                        {canCreate && (
-                            <Chip
-                                icon="plus"
-                                mode="flat"
-                                onPress={createTag}
-                                style={[
-                                    styles.modalChip,
-                                    {backgroundColor: theme.colors.primaryContainer},
-                                ]}
-                                textStyle={{color: theme.colors.onPrimaryContainer}}
-                            >
-                                Создать «#{normalizedQuery}»
-                            </Chip>
                         )}
 
-                        {filteredTags.map((name) => {
-                            const selected = isSelected(name);
-
-                            return (
+                        <ScrollView
+                            style={styles.list}
+                            keyboardShouldPersistTaps="handled"
+                            nestedScrollEnabled
+                            contentContainerStyle={styles.listContent}
+                        >
+                            {canCreate && (
                                 <Chip
-                                    key={name.toLowerCase()}
-                                    mode={selected ? 'flat' : 'outlined'}
-                                    selected={selected}
-                                    showSelectedCheck
-                                    onPress={() => toggleTag(name)}
+                                    icon="plus"
+                                    mode="flat"
+                                    onPress={createTag}
                                     style={[
                                         styles.modalChip,
-                                        selected && {
-                                            backgroundColor: theme.colors.secondaryContainer,
-                                        },
+                                        {backgroundColor: theme.colors.primaryContainer},
                                     ]}
-                                    showSelectedOverlay
-                                    compact
+                                    textStyle={{color: theme.colors.onPrimaryContainer}}
                                 >
-                                    <TagLabel
-                                        name={name}
-                                        query={query}
-                                        color={theme.colors.primary}
-                                    />
+                                    Создать «#{normalizedQuery}»
                                 </Chip>
-                            );
-                        })}
+                            )}
 
-                        {filteredTags.length === 0 && !canCreate && (
-                            <Text style={{color: theme.colors.onSurfaceVariant}}>
-                                Ничего не найдено
-                            </Text>
-                        )}
-                    </ScrollView>
+                            {filteredTags.map((name) => {
+                                const selected = isSelected(name);
 
-                    <Button mode="contained" onPress={closeModal} style={styles.doneButton}>
-                        Закрыть
-                    </Button>
-                </Modal>
-            </Portal>
+                                return (
+                                    <Chip
+                                        key={name.toLowerCase()}
+                                        mode={selected ? 'flat' : 'outlined'}
+                                        selected={selected}
+                                        showSelectedCheck
+                                        onPress={() => toggleTag(name)}
+                                        style={[
+                                            styles.modalChip,
+                                            selected && {
+                                                backgroundColor: theme.colors.secondaryContainer,
+                                            },
+                                        ]}
+                                        showSelectedOverlay
+                                        compact
+                                    >
+                                        <TagLabel
+                                            name={name}
+                                            query={query}
+                                            color={theme.colors.primary}
+                                        />
+                                    </Chip>
+                                );
+                            })}
+
+                            {filteredTags.length === 0 && !canCreate && (
+                                <Text style={{color: theme.colors.onSurfaceVariant}}>
+                                    Ничего не найдено
+                                </Text>
+                            )}
+                        </ScrollView>
+                    </>
+                }
+                actions={[{label: 'Закрыть', onPress: closeModal, mode: 'contained'}]}
+                style={[styles.modal, {backgroundColor: theme.colors.surface}]}
+            />
         </View>
     );
 }
