@@ -2,19 +2,9 @@
 import {router, useLocalSearchParams} from 'expo-router';
 import {useEffect, useState} from 'react';
 import {Image, ScrollView, StyleSheet, View} from 'react-native';
-import {
-  ActivityIndicator,
-  Avatar,
-  Button,
-  Card,
-  Chip,
-  Modal,
-  Portal,
-  ProgressBar,
-  Surface,
-  Text,
-  useTheme,
-} from 'react-native-paper';
+import {ActivityIndicator, Avatar, Button, Card, Chip, ProgressBar, Surface, Text, useTheme,} from 'react-native-paper';
+
+import AppPopup from '@/components/app-popup';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {getAddressFromCoordinates, getStaticMapUrl} from '@/api';
@@ -311,44 +301,38 @@ export default function EventDetailScreen() {
               </View>
             </Surface>
 
-            <Portal>
-              <Modal
-                  visible={mapVisible}
-                  onDismiss={() => setMapVisible(false)}
-                  contentContainerStyle={[
-                    styles.modal,
-                    {backgroundColor: theme.colors.elevation.level3}
-                  ]}
-              >
-                <Text variant="titleMedium" style={[styles.modalTitle, {color: theme.colors.onSurface}]}>
-                  Адрес на карте
-                </Text>
-                <Text
-                    variant="bodyMedium"
-                    style={[styles.modalMeta, {color: theme.colors.onSurfaceVariant}]}
-                    numberOfLines={2}
-                    ellipsizeMode="tail"
-                >
-                  {formattedDate}, {addressName}
-                </Text>
-                {mapLoading && (
-                    <View style={styles.modalLoader}>
-                      <ActivityIndicator animating size="large"/>
-                    </View>
-                )}
-                {mapError && (
-                    <Text variant="bodyMedium" style={[styles.errorText, {color: theme.colors.error}]}>
-                      {mapError}
+            <AppPopup
+                visible={mapVisible}
+                onDismiss={() => setMapVisible(false)}
+                header="Адрес на карте"
+                body={
+                  <>
+                    <Text
+                        variant="bodyMedium"
+                        style={[styles.modalMeta, {color: theme.colors.onSurfaceVariant}]}
+                        numberOfLines={2}
+                        ellipsizeMode="tail"
+                    >
+                      {formattedDate}, {addressName}
                     </Text>
-                )}
-                {!mapLoading && mapUrl && (
-                    <Image source={{uri: mapUrl}} style={styles.mapImage}/>
-                )}
-                <Button mode="contained" onPress={() => setMapVisible(false)} style={styles.closeMapButton}>
-                  Закрыть
-                </Button>
-              </Modal>
-            </Portal>
+                    {mapLoading && (
+                        <View style={styles.modalLoader}>
+                          <ActivityIndicator animating size="large"/>
+                        </View>
+                    )}
+                    {mapError && (
+                        <Text variant="bodyMedium" style={[styles.errorText, {color: theme.colors.error}]}>
+                          {mapError}
+                        </Text>
+                    )}
+                    {!mapLoading && mapUrl && (
+                        <Image source={{uri: mapUrl}} style={styles.mapImage}/>
+                    )}
+                  </>
+                }
+                actions={[{label: 'Закрыть', onPress: () => setMapVisible(false), mode: 'contained'}]}
+                style={[styles.modal, {backgroundColor: theme.colors.elevation.level3}]}
+            />
           </ScrollView>
 
           {/* НИЖНЯЯ ПАНЕЛЬ С КНОПКАМИ */}

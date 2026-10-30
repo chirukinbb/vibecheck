@@ -4,7 +4,9 @@ import {Dimensions, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextI
 
 import {Bubble, GiftedChat, type IMessage, InputToolbar} from 'react-native-gifted-chat';
 
-import {Button, Modal, Portal, Text, useTheme} from 'react-native-paper';
+import {Text, useTheme} from 'react-native-paper';
+
+import AppPopup from '@/components/app-popup';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import PageLayout from '@/components/page-layout';
@@ -219,6 +221,7 @@ export default function EventChatScreen() {
                 id?: number | string;
                 author?: { id?: number | string };
                 user?: { _id?: number | string };
+                text?: string;
             };
 
             const messageAuthorId = typedMessage.author?.id ?? typedMessage.user?._id;
@@ -227,18 +230,30 @@ export default function EventChatScreen() {
             const messageId = String(typedMessage._id ?? typedMessage.id ?? '');
             if (!messageId) return;
 
-            showPopup('Сообщение', undefined, [
-                {
-                    text: 'Редактировать',
-                    onPress: () => handleEditMessage(messageId),
-                },
-                {
-                    text: 'Удалить',
-                    style: 'destructive',
-                    onPress: () => handleDeleteMessage(messageId),
-                },
-                {text: 'Отмена', style: 'cancel', onPress: hidePopup},
-            ]);
+            const preview = typeof typedMessage.text === 'string'
+                ? typedMessage.text.trim()
+                : '';
+
+            showPopup(
+                'Сообщение',
+                preview
+                    ? preview.length > 120
+                        ? `${preview.slice(0, 120)}…`
+                        : preview
+                    : 'Выберите действие с этим сообщением.',
+                [
+                    {
+                        text: 'Редактировать',
+                        style: 'default',
+                        onPress: () => handleEditMessage(messageId),
+                    },
+                    {
+                        text: 'Удалить',
+                        style: 'destructive',
+                        onPress: () => handleDeleteMessage(messageId),
+                    },
+                ]
+            );
         },
         [currentUserId, handleDeleteMessage, handleEditMessage, hidePopup, showPopup]
     );
@@ -330,56 +345,47 @@ export default function EventChatScreen() {
             icon="arrow-left"
             onIconPress={() => router.back()}
         >
-            <Portal>
-                <Modal
-                    visible={popup.visible}
-                    onDismiss={hidePopup}
-                    contentContainerStyle={[
-                        styles.popupContainer,
-                        {backgroundColor: theme.colors.surface},
-                    ]}
-                >
-                    <Text variant="titleMedium" style={[styles.popupTitle, {color: theme.colors.onSurface}]}>
-                        {popup.title}
-                    </Text>
-                    {popup.message ? (
+            <AppPopup
+                visible={popup.visible}
+                onDismiss={hidePopup}
+                header={popup.title}
+                body={
+                    popup.message ? (
                         <Text variant="bodyMedium"
                               style={[styles.popupMessage, {color: theme.colors.onSurfaceVariant}]}>
                             {popup.message}
                         </Text>
-                    ) : null}
-                    <View style={styles.popupActions}>
-                        {popup.actions.map((action) => (
-                            <Button
-                                key={action.text}
-                                mode={action.style === 'destructive' ? 'contained' : 'text'}
-                                onPress={async () => {
-                                    hidePopup();
-                                    if (action.onPress) {
-                                        await action.onPress();
-                                    }
-                                }}
-                                textColor={
-                                    action.style === 'destructive'
-                                        ? theme.colors.onPrimary
-                                        : action.style === 'cancel'
-                                            ? theme.colors.onSurfaceVariant
-                                            : theme.colors.primary
-                                }
-                                buttonColor={
-                                    action.style === 'destructive'
-                                        ? theme.colors.error
-                                        : action.style === 'cancel'
-                                            ? 'transparent'
-                                            : 'transparent'
-                                }
-                            >
-                                {action.text}
-                            </Button>
-                        ))}
-                    </View>
-                </Modal>
-            </Portal>
+                    ) : null
+                }
+                actions={popup.actions.map((action) => ({
+                    label: action.text,
+                    onPress: async () => {
+                        hidePopup();
+                        if (action.onPress) {
+                            await action.onPress();
+                        }
+                    },
+                    mode:
+                        action.style === 'destructive'
+                            ? 'contained'
+                            : action.style === 'cancel'
+                                ? 'text'
+                                : 'outlined',
+                    textColor:
+                        action.style === 'destructive'
+                            ? theme.colors.onError
+                            : action.style === 'cancel'
+                                ? theme.colors.onSurfaceVariant
+                                : theme.colors.primary,
+                    buttonColor:
+                        action.style === 'destructive'
+                            ? theme.colors.error
+                            : action.style === 'cancel'
+                                ? 'transparent'
+                                : 'transparent',
+                }))}
+                style={[styles.popupContainer, {backgroundColor: theme.colors.surface}]}
+            />
 
             <KeyboardAvoidingView
                 style={styles.flexOne}
@@ -630,25 +636,37 @@ const styles = StyleSheet.create({
         marginBottom: 2,
     },
     popupContainer: {
-        margin: 24,
-        padding: 16,
-        borderRadius: 12,
+        margin: 20,
+        padding: 20,
+        borderRadius: 16,
+        maxWidth: 420,
+        width: '90%',
+        alignSelf: 'center',
     },
     popupTitle: {
         marginBottom: 8,
         fontSize: 18,
-        fontWeight: '600',
+        fontWeight: '700',
     },
     popupMessage: {
-        marginBottom: 12,
-        lineHeight: 20,
+        marginBottom: 16,
+        lineHeight: 22,
     },
     popupActions: {
         flexDirection: 'row',
         justifyContent: 'flex-end',
         alignItems: 'center',
         flexWrap: 'wrap',
-        gap: 8,
+        gap: 4,
+        marginTop: 4,
+    },
+    popupActionButton: {
+        borderRadius: 10,
+        minWidth: 88,
+    },
+    popupActionLabel: {
+        fontWeight: '600',
+        letterSpacing: 0.1,
     },
 
     composer: {
