@@ -18,6 +18,7 @@ export type { FilterUpdateDTO, GeoCenter, GeoFilter } from './filter';
 export type {
     CreateEventDTO, Event,
     EventAuthor,
+    EventComment,
     EventListItem,
     Tag, UpdateEventDTO
 } from './event';
@@ -31,7 +32,7 @@ export type {
     ChatMessage,
     ChatMessageDTO,
     ChatMessageListResponse,
-    ChatMessageUpdateDTO,
+    ChatMessageUpdateDTO
 } from './chat';
 
 export type {CreateFeedbackDTO} from './feedback';

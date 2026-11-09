@@ -1,17 +1,32 @@
 // src/app/event/[id].tsx — детальная страница события
+import * as Clipboard from 'expo-clipboard';
 import {router, useLocalSearchParams} from 'expo-router';
 import {useEffect, useState} from 'react';
 import {Image, ScrollView, StyleSheet, View} from 'react-native';
-import {ActivityIndicator, Avatar, Button, Card, Chip, ProgressBar, Surface, Text, useTheme,} from 'react-native-paper';
+import {
+  ActivityIndicator,
+  Avatar,
+  Button,
+  Card,
+  Chip,
+  IconButton,
+  ProgressBar,
+  Surface,
+  Text,
+  TextInput,
+  useTheme,
+} from 'react-native-paper';
 
 import AppPopup from '@/components/app-popup';
+import EventFooter from '@/components/event-footer';
+import SegmentedToggle from '@/components/segmented-toggle';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {getAddressFromCoordinates, getStaticMapUrl} from '@/api';
 import PageLayout from '@/components/page-layout';
 import {formatDate} from '@/constants/mock-data';
 import {MaxContentWidth, Spacing} from '@/constants/theme';
-import {useEventsStore} from '@/stores';
+import {useAuthStore, useEventsStore} from '@/stores';
 
 export default function EventDetailScreen() {
   const {id} = useLocalSearchParams<{ id: string }>();
@@ -25,14 +40,22 @@ export default function EventDetailScreen() {
     fetchEvent,
     clearSelected,
     subscribe,
-    unsubscribe
+    unsubscribe,
+    feedbackMember,
   } = useEventsStore();
+  const {profile} = useAuthStore();
 
   const [addressName, setAddressName] = useState<string>('Определение адреса…');
   const [mapVisible, setMapVisible] = useState(false);
   const [mapUrl, setMapUrl] = useState<string | null>(null);
   const [mapLoading, setMapLoading] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [reviewVisible, setReviewVisible] = useState(false);
+  const [reviewsListVisible, setReviewsListVisible] = useState(false);
+  const [linkPopupVisible, setLinkPopupVisible] = useState(false);
+  const [reviewComment, setReviewComment] = useState('');
+  const [reviewMark, setReviewMark] = useState(8);
+  const [reviewHappened, setReviewHappened] = useState(true);
 
   useEffect(() => {
     if (!id) return;
@@ -41,6 +64,19 @@ export default function EventDetailScreen() {
   }, [clearSelected, fetchEvent, id]);
 
   const event = selectedEvent;
+  const eventLink = event?.link?.trim();
+  const qrCodeUrl = eventLink
+      ? `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(eventLink)}`
+      : null;
+
+  const handleCopyLink = async () => {
+    if (!eventLink) return;
+    try {
+      await Clipboard.setStringAsync(eventLink);
+    } catch (e) {
+      console.warn('Не удалось скопировать ссылку', e);
+    }
+  };
 
   // Извлекаем широту и долготу из полей объекта
   const lat = event?.coordinate_lat ? parseFloat(event.coordinate_lat) : null;
@@ -103,6 +139,10 @@ export default function EventDetailScreen() {
   const isFull = slotsLeft <= 0;
   const occupancyText = isFull ? 'Мест нет' : `${slotsLeft} свободно`;
   const formattedDate = formatDate(event.planing_time);
+  const conditionLabel = event.condition === 'paid' ? 'Платно' : event.condition === 'free' ? 'Бесплатно' : 'Не указано';
+  const formattedPrice = event.price != null && event.price !== ''
+      ? `${Number(event.price).toLocaleString('uk-UA')} ₴`
+      : '—';
   const hasApprovalIssue = event.approved === false;
   const isArchivedEvent = (() => {
     if (!event.planing_time) return false;
@@ -111,22 +151,87 @@ export default function EventDetailScreen() {
     return Number.isFinite(ms) && ms < Date.now();
   })();
 
-  const renderArchiveReviewButton = (label: string, icon: string) => (
-      <View style={styles.devActionWrap}>
-        <Button
-            mode="outlined"
-            icon={icon}
-            disabled
-            style={styles.devActionButton}
-            compact
-        >
-          {label}
-        </Button>
-        <Text variant="labelSmall" style={[styles.devBadge, {color: theme.colors.onSurfaceVariant}]}>
-          В разработке
-        </Text>
-      </View>
+  const getCommentText = (value: unknown): string => {
+    if (typeof value === 'string') return value;
+    if (value && typeof value === 'object') {
+      const obj = value as Record<string, unknown>;
+      if (typeof obj.comment === 'string') return obj.comment;
+      if (typeof obj.text === 'string') return obj.text;
+      if (typeof obj.value === 'string') return obj.value;
+    }
+    return value != null ? String(value) : '';
+  };
+
+  const reviewList = Array.isArray(event.comments)
+      ? (event.comments as Array<{
+        id?: number | string | null;
+        comment?: unknown;
+        mark?: string | number | null;
+        is_happened?: number | boolean | null;
+      }>).filter((item) => {
+        const text = getCommentText(item?.comment).trim();
+        const hasComment = text.length > 0;
+        const hasMark = item?.mark !== null && item?.mark !== undefined && String(item.mark).trim() !== '';
+        return hasComment || hasMark;
+      })
+      : [];
+  const existingEventReview = reviewList[0] ?? (event.comment ? {
+    comment: getCommentText(event.comment),
+    mark: event.mark,
+    is_happened: event.is_happened,
+  } : null);
+  const isOrganizer = Boolean(
+      profile?.id != null &&
+      event.author?.id != null &&
+      Number(profile.id) === Number(event.author.id)
   );
+  const hasExistingReview = Boolean(existingEventReview);
+
+  const openReviewForm = () => {
+    setReviewsListVisible(false);
+    const review = existingEventReview;
+
+    if (review) {
+      const nextComment = getCommentText(review.comment);
+      const nextMark = Number(review.mark ?? 5);
+
+      setReviewComment(nextComment);
+      setReviewMark(Number.isFinite(nextMark) ? nextMark : 5);
+      setReviewHappened(review.is_happened === false ? false : true);
+    }
+    setReviewVisible(true);
+  };
+
+  const openReviewsList = () => {
+    setReviewVisible(false);
+    setReviewsListVisible(true);
+  };
+
+  const handleReviewSubmit = async () => {
+    if (!event?.id || !event.member) return;
+
+    const comment = typeof reviewComment === 'string'
+        ? reviewComment.trim()
+        : String(reviewComment ?? '').trim();
+
+    if (!comment) {
+      return;
+    }
+
+    const result = await feedbackMember(event.id, Number(event.member), {
+      is_happened: reviewHappened,
+      comment,
+      mark: reviewMark,
+    });
+
+    if (result) {
+      setReviewVisible(false);
+      setReviewComment('');
+      setReviewMark(8);
+      setReviewHappened(true);
+      await fetchEvent(event.id);
+    }
+  };
 
   return (
       <PageLayout
@@ -185,6 +290,12 @@ export default function EventDetailScreen() {
             <Text variant="headlineSmall" style={[styles.eventTitle, {color: theme.colors.onSurface}]}>
               {event.title}
             </Text>
+
+            {event.distance_km != null && (
+                <Text variant="bodyMedium" style={[styles.distanceText, {color: theme.colors.primary}]}>
+                  📍 Расстояние: {event.distance_km} км
+                </Text>
+            )}
 
             <Surface
                 elevation={2}
@@ -247,6 +358,38 @@ export default function EventDetailScreen() {
               {event.description}
             </Text>
 
+            <Surface
+                elevation={0}
+                style={[
+                  styles.metaBlock,
+                  {backgroundColor: theme.colors.surfaceVariant, borderColor: theme.colors.outlineVariant},
+                ]}
+            >
+              <View style={styles.metaRow}>
+                <Text variant="labelMedium" style={{color: theme.colors.onSurfaceVariant}}>
+                  Условия
+                </Text>
+                <Text variant="bodyMedium" style={{color: theme.colors.onSurface, fontWeight: '600'}}>
+                  {conditionLabel}
+                </Text>
+              </View>
+
+              <View style={styles.metaRow}>
+                <Text variant="labelMedium" style={{color: theme.colors.onSurfaceVariant}}>
+                  Цена
+                </Text>
+                <Text variant="bodyMedium" style={{color: theme.colors.onSurface, fontWeight: '600'}}>
+                  {event.condition === 'paid' ? formattedPrice : '—'}
+                </Text>
+              </View>
+            </Surface>
+
+            {eventLink && (
+                <Button mode="outlined" onPress={() => setLinkPopupVisible(true)} style={styles.linkButton}>
+                  Ссылка / QR-код
+                </Button>
+            )}
+
             {event.tags && event.tags.length > 0 && (
                 <View style={styles.tagsRow}>
                   {event.tags.map((tag, idx) => (
@@ -262,44 +405,78 @@ export default function EventDetailScreen() {
                 </View>
             )}
 
-            <Surface
-                elevation={2}
-                style={[
-                  styles.authorCard,
-                  {
-                    backgroundColor: theme.colors.elevation.level2,
-                    borderColor: theme.colors.outlineVariant,
-                  }
-                ]}
-            >
-              <Text variant="labelLarge" style={[styles.sectionTitle, {color: theme.colors.onSurface}]}>
-                Организатор
-              </Text>
-              <View style={styles.authorRow}>
-                {event.author?.avatar_url ? (
-                    <Avatar.Image
-                        size={48}
-                        source={{uri: event.author.avatar_url}}
-                        style={[styles.authorAvatar, {backgroundColor: theme.colors.primaryContainer}]}
-                    />
-                ) : (
-                    <Avatar.Text
-                        size={48}
-                        label={event.author?.name ? event.author.name.charAt(0).toUpperCase() : '?'}
-                        style={[styles.authorAvatar, {backgroundColor: theme.colors.primaryContainer}]}
-                        labelStyle={{color: theme.colors.onPrimaryContainer}}
-                    />
-                )}
-                <View style={styles.authorInfo}>
-                  <Text variant="bodyLarge" style={{fontWeight: '700', color: theme.colors.onSurface}}>
-                    {event.author?.name}
+            {!isOrganizer && (
+                <Surface
+                    elevation={2}
+                    style={[
+                      styles.authorCard,
+                      {
+                        backgroundColor: theme.colors.elevation.level2,
+                        borderColor: theme.colors.outlineVariant,
+                      }
+                    ]}
+                >
+                  <Text variant="labelLarge" style={[styles.sectionTitle, {color: theme.colors.onSurface}]}>
+                    Организатор
                   </Text>
-                  <Text variant="bodyMedium" style={{color: theme.colors.onSurfaceVariant}}>
-                    {event.author?.bio}
-                  </Text>
-                </View>
-              </View>
-            </Surface>
+                  <View style={styles.authorRow}>
+                    {event.author?.avatar_url ? (
+                        <Avatar.Image
+                            size={48}
+                            source={{uri: event.author.avatar_url}}
+                            style={[styles.authorAvatar, {backgroundColor: theme.colors.primaryContainer}]}
+                        />
+                    ) : (
+                        <Avatar.Text
+                            size={48}
+                            label={event.author?.name ? event.author.name.charAt(0).toUpperCase() : '?'}
+                            style={[styles.authorAvatar, {backgroundColor: theme.colors.primaryContainer}]}
+                            labelStyle={{color: theme.colors.onPrimaryContainer}}
+                        />
+                    )}
+                    <View style={styles.authorInfo}>
+                      <Text variant="bodyLarge" style={{fontWeight: '700', color: theme.colors.onSurface}}>
+                        {event.author?.name}
+                      </Text>
+                      <Text variant="bodyMedium" style={{color: theme.colors.onSurfaceVariant}}>
+                        {event.author?.bio}
+                      </Text>
+                    </View>
+                  </View>
+                </Surface>
+            )}
+
+            <AppPopup
+                visible={linkPopupVisible}
+                onDismiss={() => setLinkPopupVisible(false)}
+                header="Ссылка на событие"
+                body={
+                  <View style={styles.linkPopupContent}>
+                    <Text variant="bodyMedium" style={[styles.linkText, {color: theme.colors.onSurfaceVariant}]}
+                          numberOfLines={4}>
+                      {eventLink}
+                    </Text>
+
+                    <View style={styles.linkActions}>
+                      <Button mode="outlined" onPress={handleCopyLink} compact>
+                        Копировать
+                      </Button>
+                    </View>
+
+                    {qrCodeUrl && (
+                        <View style={styles.qrWrap}>
+                          <Image
+                              source={{uri: qrCodeUrl}}
+                              style={styles.qrImage}
+                              resizeMode="contain"
+                          />
+                        </View>
+                    )}
+                  </View>
+                }
+                actions={[{label: 'Закрыть', onPress: () => setLinkPopupVisible(false), mode: 'contained'}]}
+                style={[styles.modal, {backgroundColor: theme.colors.elevation.level3}]}
+            />
 
             <AppPopup
                 visible={mapVisible}
@@ -333,100 +510,131 @@ export default function EventDetailScreen() {
                 actions={[{label: 'Закрыть', onPress: () => setMapVisible(false), mode: 'contained'}]}
                 style={[styles.modal, {backgroundColor: theme.colors.elevation.level3}]}
             />
+
+            <AppPopup
+                visible={reviewsListVisible}
+                onDismiss={() => setReviewsListVisible(false)}
+                header={reviewList.length > 0 ? 'Отзывы' : 'Пока нет отзывов'}
+                body={
+                  reviewList.length > 0 ? (
+                      <View style={styles.reviewListContainer}>
+                        {reviewList.map((item, index) => {
+                          const itemText = getCommentText(item.comment).trim();
+                          const itemMark = Number(item.mark ?? 0);
+
+                          return (
+                              <View key={`${item.id ?? item.comment ?? index}`} style={styles.reviewListItem}>
+                                <View style={styles.reviewListHeader}>
+                                  <Text variant="labelLarge" style={{color: theme.colors.onSurface}}>
+                                    Оценка: {Number.isFinite(itemMark) && itemMark > 0 ? itemMark : 0}/5
+                                  </Text>
+                                  <Text variant="labelLarge" style={{color: theme.colors.primary}}>
+                                    {'★'.repeat(Math.max(0, Math.min(5, Number.isFinite(itemMark) ? itemMark : 0)))}
+                                  </Text>
+                                </View>
+                                <Text variant="bodyMedium" style={{color: theme.colors.onSurfaceVariant}}>
+                                  {itemText || 'Без текста'}
+                                </Text>
+                              </View>
+                          );
+                        })}
+                      </View>
+                  ) : (
+                      <Text variant="bodyMedium" style={{color: theme.colors.onSurfaceVariant}}>
+                        У этого события ещё нет отзывов.
+                      </Text>
+                  )
+                }
+                actions={[{label: 'Закрыть', onPress: () => setReviewsListVisible(false), mode: 'contained'}]}
+                style={[styles.modal, {backgroundColor: theme.colors.elevation.level3}]}
+            />
+
+            <AppPopup
+                visible={reviewVisible}
+                onDismiss={() => setReviewVisible(false)}
+                header={hasExistingReview ? 'Редактировать отзыв' : 'Оставить отзыв'}
+                body={
+                  <>
+                    <Text variant="bodyMedium" style={{color: theme.colors.onSurfaceVariant}}>
+                      Расскажите, как прошло событие.
+                    </Text>
+
+                    <SegmentedToggle
+                        options={[
+                          {label: 'Было', value: true},
+                          {label: 'Не было', value: false},
+                        ]}
+                        value={reviewHappened}
+                        onChange={setReviewHappened}
+                        style={styles.reviewToggleRow}
+                        buttonStyle={styles.reviewToggleButton}
+                    />
+
+                    <Text variant="labelLarge" style={{color: theme.colors.onSurface}}>
+                      Оценка: {reviewMark}/5
+                    </Text>
+
+                    <View style={styles.ratingRow}>
+                      {Array.from({length: 5}, (_, index) => {
+                        const value = index + 1;
+                        const isActive = reviewMark >= value;
+
+                        return (
+                            <IconButton
+                                key={value}
+                                icon={isActive ? 'star' : 'star-outline'}
+                                size={28}
+                                onPress={() => setReviewMark(value)}
+                                style={styles.starButton}
+                                iconColor={isActive ? theme.colors.primary : theme.colors.outline}
+                            />
+                        );
+                      })}
+                    </View>
+
+                    <TextInput
+                        value={reviewComment}
+                        onChangeText={setReviewComment}
+                        mode="outlined"
+                        label="Комментарий"
+                        multiline
+                        numberOfLines={5}
+                        style={styles.reviewInput}
+                        placeholder="Например: всё прошло отлично, команда была организована и атмосфера была очень тёплой"
+                    />
+                  </>
+                }
+                actions={[
+                  {label: 'Отмена', onPress: () => setReviewVisible(false), mode: 'text'},
+                  {
+                    label: isMutating ? 'Сохраняем…' : hasExistingReview ? 'Сохранить' : 'Отправить',
+                    onPress: handleReviewSubmit,
+                    mode: 'contained',
+                    disabled: isMutating || !reviewComment.trim(),
+                  },
+                ]}
+                style={[styles.modal, {backgroundColor: theme.colors.elevation.level3}]}
+            />
           </ScrollView>
 
-          {/* НИЖНЯЯ ПАНЕЛЬ С КНОПКАМИ */}
-          <Surface
-              elevation={2}
-              style={[
-                styles.footer,
-                {
-                  paddingBottom: insets.bottom + Spacing.three,
-                  backgroundColor: theme.colors.elevation.level2,
-                  borderTopColor: theme.colors.outlineVariant,
-                },
-              ]}
-          >
-            {Array.isArray(event.members) ? (
-                /* --- Режим организатора --- */
-                <>
-                  {!isArchivedEvent && (
-                      <View style={styles.actionRow}>
-                        <Button
-                            mode="outlined"
-                            icon="pencil"
-                            onPress={() => router.push(`/event/edit/${event.id}`)}
-                            style={styles.flexButton}
-                            compact
-                        >
-                          Изменить
-                        </Button>
-
-                        <Button
-                            mode="contained"
-                            icon="chat"
-                            onPress={() => router.push(`/event/chat/${event.id}`)}
-                            style={styles.flexButton}
-                            compact
-                        >
-                          Чат
-                        </Button>
-                      </View>
-                  )}
-
-                  {isArchivedEvent && renderArchiveReviewButton('Посмотреть отзывы', 'star')}
-                </>
-            ) : event.member ? (
-                /* --- Режим участника (подписан на ивент) --- */
-                <>
-                  {!isArchivedEvent && (
-                      <View style={styles.actionRow}>
-                        <Button
-                            mode="outlined"
-                            onPress={async () => {
-                              await unsubscribe(event.id);
-                            }}
-                            loading={isMutating}
-                            disabled={isMutating}
-                            style={styles.flexButton}
-                            compact
-                        >
-                          {isMutating ? 'Отписываем…' : 'Отписаться'}
-                        </Button>
-
-                        <Button
-                            mode="contained"
-                            icon="chat"
-                            onPress={() => router.push(`/event/chat/${event.chat_id}`)}
-                            style={styles.flexButton}
-                            compact
-                        >
-                          Чат
-                        </Button>
-                      </View>
-                  )}
-
-                  {isArchivedEvent && renderArchiveReviewButton('Оставить отзыв', 'star')}
-                </>
-            ) : (
-                /* --- Режим гостя (не подписан) --- */
-                <Button
-                    mode="contained"
-                    onPress={async () => {
-                      await subscribe(event.id);
-                    }}
-                    loading={isMutating}
-                    disabled={isMutating || isFull}
-                    style={styles.bottomButton}
-                >
-                  {isMutating
-                      ? 'Записываем…'
-                      : isFull
-                          ? 'Мест нет'
-                          : 'Записаться'}
-                </Button>
-            )}
-          </Surface>
+          <EventFooter
+              variant={isOrganizer ? 'organizer' : event.member ? 'member' : 'guest'}
+              isArchivedEvent={isArchivedEvent}
+              isMutating={isMutating}
+              isFull={isFull}
+              hasExistingReview={hasExistingReview}
+              insetsBottom={insets.bottom}
+              onEdit={openReviewForm}
+              onSubscribe={async () => {
+                await subscribe(event.id);
+              }}
+              onUnsubscribe={async () => {
+                await unsubscribe(event.id);
+              }}
+              onOpenChat={() => router.push(`/event/chat/${event.member ? event.chat_id : event.id}`)}
+              onOpenReview={openReviewForm}
+              onOpenReviews={openReviewsList}
+          />
         </View>
       </PageLayout>
   );
@@ -498,6 +706,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: Spacing.three,
   },
+  distanceText: {
+    marginBottom: Spacing.two,
+    fontWeight: '600',
+  },
   detailsRow: {
     flexDirection: 'row',
     gap: Spacing.two,
@@ -532,6 +744,44 @@ const styles = StyleSheet.create({
     lineHeight: 28,
     marginBottom: Spacing.three,
     fontSize: 16,
+  },
+  metaBlock: {
+    borderRadius: Spacing.two,
+    borderWidth: 1,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    marginBottom: Spacing.three,
+    gap: Spacing.one,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  linkButton: {
+    marginBottom: Spacing.three,
+  },
+  linkPopupContent: {
+    gap: Spacing.two,
+  },
+  linkText: {
+    lineHeight: 22,
+  },
+  linkActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  qrWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: Spacing.one,
+  },
+  qrImage: {
+    width: 180,
+    height: 180,
+    borderRadius: Spacing.two,
+    backgroundColor: '#fff',
   },
   tagsRow: {
     flexDirection: 'row',
@@ -596,6 +846,45 @@ const styles = StyleSheet.create({
     minHeight: 220,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  reviewToggleRow: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+    marginVertical: Spacing.two,
+  },
+  reviewToggleButton: {
+    flex: 1,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginVertical: Spacing.two,
+  },
+  starButton: {
+    margin: 0,
+    padding: 0,
+    flex: 1,
+  },
+  reviewListContainer: {
+    gap: Spacing.two,
+  },
+  reviewListItem: {
+    borderWidth: 1,
+    borderColor: '#dfe3ea',
+    borderRadius: Spacing.two,
+    padding: Spacing.two,
+    gap: Spacing.one,
+  },
+  reviewListHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  reviewInput: {
+    marginTop: Spacing.two,
   },
   errorText: {
     marginBottom: Spacing.two,

@@ -21,6 +21,10 @@ export interface PayloadForValidation {
   category_id: number;
   address: [number, number];
   slots: number;
+  link?: string | null;
+  condition?: 'paid' | 'free';
+  price?: number | string | null;
+  is_public?: number | boolean;
   planing_time: string;
   thumbnail: ReactNativeFile;
   tags?: string[];
@@ -36,6 +40,10 @@ export function formatEventPayload(dto: Partial<CreateEventDTO> & Record<string,
     category_id,
     address,
     slots,
+    link,
+    condition,
+    price,
+    is_public,
     planing_time,
     thumb_path,
     tags,
@@ -47,6 +55,10 @@ export function formatEventPayload(dto: Partial<CreateEventDTO> & Record<string,
     category_id: Number(category_id),
     address: Array.isArray(address) ? address : [0, 0],
     slots: Number(slots) || 0,
+    link,
+    condition,
+    price,
+    is_public,
     planing_time: planing_time !== null && planing_time !== undefined
         ? String(planing_time)
         : '',

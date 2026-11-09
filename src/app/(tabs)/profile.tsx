@@ -42,29 +42,30 @@ export default function ProfileScreen() {
         setLanguages(profile.languages ?? []);
         setBio(profile.bio ?? '');
     setAvatarUri(profile.avatar_url ?? null);
-  }, [profile]);
+    }, [profile]);
 
-  // ─── Профиль ─────────────────────────────────────────────────
-  const [name, setName] = useState(profile?.name ?? '');
-  const [languages, setLanguages] = useState<string[]>(profile?.languages ?? []);
-  const [bio, setBio] = useState(profile?.bio ?? '');
-  const [avatarUri, setAvatarUri] = useState<string | null>(profile?.avatar_url ?? null);
+    // ─── Профиль ─────────────────────────────────────────────────
+    const [name, setName] = useState(profile?.name ?? '');
+    const [languages, setLanguages] = useState<string[]>(profile?.languages ?? []);
+    const [bio, setBio] = useState(profile?.bio ?? '');
+    const [avatarUri, setAvatarUri] = useState<string | null>(profile?.avatar_url ?? null);
 
-  // ─── Фильтр ──────────────────────────────────────────────────
-  const [filterAddress, setFilterAddress] = useState<[number, number]>(filter?.center ?? [0, 0]);
-  const [radius, setRadius] = useState(String(filter?.radius ?? 10));
+    // ─── Фильтр ──────────────────────────────────────────────────
+    const [filterAddress, setFilterAddress] = useState<[number, number]>(filter?.center ?? [0, 0]);
+    const FIXED_FILTER_RADIUS = 10;
+    const [radius, setRadius] = useState(String(filter?.radius ?? FIXED_FILTER_RADIUS));
     const [selectedCategories, setSelectedCategories] = useState<number[]>(filter?.categories ?? []);
     const isFilterTabMarked = isFilterEmpty(filter);
 
-  const sanitizeDigits = (value: string) => value.replace(/\D/g, '');
-  const areStringArraysEqual = (left: string[], right: string[]) => {
-    if (left.length !== right.length) return false;
-    return left.every((value, index) => value === right[index]);
-  };
-  const areNumberArraysEqual = (left: number[], right: number[]) => {
-    const sortedLeft = [...left].sort((a, b) => a - b);
-    const sortedRight = [...right].sort((a, b) => a - b);
-    if (sortedLeft.length !== sortedRight.length) return false;
+    const sanitizeDigits = (value: string) => value.replace(/\D/g, '');
+    const areStringArraysEqual = (left: string[], right: string[]) => {
+        if (left.length !== right.length) return false;
+        return left.every((value, index) => value === right[index]);
+    };
+    const areNumberArraysEqual = (left: number[], right: number[]) => {
+        const sortedLeft = [...left].sort((a, b) => a - b);
+        const sortedRight = [...right].sort((a, b) => a - b);
+        if (sortedLeft.length !== sortedRight.length) return false;
     return sortedLeft.every((value, index) => value === sortedRight[index]);
   };
 
@@ -79,14 +80,14 @@ export default function ProfileScreen() {
   const hasFilterChanges =
       filterAddress[0] !== (filter?.center?.[0] ?? 0) ||
       filterAddress[1] !== (filter?.center?.[1] ?? 0) ||
-      Number(radius) !== Number(filter?.radius ?? 10) ||
+      Number(radius) !== Number(filter?.radius ?? FIXED_FILTER_RADIUS) ||
       !areNumberArraysEqual(selectedCategories, filter?.categories ?? []);
 
   const isFilterSaveDisabled = isFilterUpdating || !radius.trim() || Number(radius) <= 0 || !hasFilterChanges;
 
   useEffect(() => {
     if (filter?.radius != null) {
-      setRadius(String(filter.radius));
+        setRadius(String(filter.radius || FIXED_FILTER_RADIUS));
     }
     if (filter?.categories) {
       setSelectedCategories(filter.categories);
@@ -112,8 +113,9 @@ export default function ProfileScreen() {
   };
 
   const handleSaveFilter = async () => {
-      const nextRadius = Number(radius) || 10;
+      const nextRadius = FIXED_FILTER_RADIUS;
       const wasFilterEmpty = isFilterEmpty(filter);
+      setRadius(String(nextRadius));
       setFilterFeedback(null);
       try {
           const message = await saveFilter({
@@ -320,14 +322,17 @@ export default function ProfileScreen() {
                           locationLoading={locationLoading}
                       />
 
-                      <TextInput
-                          mode="outlined"
-                          label="Радиус (км)"
-                          value={radius}
-                          onChangeText={(text) => setRadius(sanitizeDigits(text))}
-                          keyboardType="numeric"
-                          placeholder="10"
-                      />
+                        <TextInput
+                            mode="outlined"
+                            label="Радиус (км)"
+                            value={String(FIXED_FILTER_RADIUS)}
+                            onChangeText={(text) => setRadius(sanitizeDigits(text))}
+                            keyboardType="numeric"
+                            placeholder="10"
+                            editable={false}
+                            style={styles.hiddenRadiusInput}
+                            pointerEvents="none"
+                        />
 
                       <MultiSelect
                           label="Категории"
@@ -467,5 +472,8 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         fontSize: 13,
         textAlign: 'center',
+    },
+    hiddenRadiusInput: {
+        display: 'none',
     },
 });

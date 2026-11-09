@@ -4,10 +4,24 @@ import {Profile} from "@/types/profile";
 
 /** Автор события (вложенный объект в ответе GET /api/v1/event/{id}) */
 export interface EventAuthor {
+    id?: number | null;
     name: string;
     avatar_url: string | null;
     languages: string[];
     bio: string | null;
+}
+
+
+/** Комментарий участника о событии */
+export interface EventComment {
+    id?: number | null;
+    user_id?: number | null;
+    event_id?: number | null;
+    comment?: string | null;
+    mark?: string | number | null;
+    is_happened?: boolean | number | null;
+    created_at?: string | null;
+    updated_at?: string | null;
 }
 
 /** Общие поля события */
@@ -17,7 +31,11 @@ interface EventBase {
     category: string;
     thumbnail_url: string;
     description: string;
+    link?: string | null;
     slots: number;
+    condition?: 'paid' | 'free' | null;
+    price?: number | string | null;
+    is_public?: number | boolean | null;
     /** Текущее количество записавшихся (может быть null — известный баг бэкенда) */
     reserved: number | null;
     /** Unix timestamp (секунды) */
@@ -26,6 +44,8 @@ interface EventBase {
     approved?: boolean | null;
     /** Причина отказа/возвращения на доработку */
     reason?: string | null;
+    /** Расстояние до события в километрах, если рассчитано API */
+    distance_km?: number | null;
 }
 
 /**
@@ -61,6 +81,11 @@ export interface Event extends EventBase {
     is_happened?: number | null;
     member?: number;
     members?: Member[];
+    /** Отзыв о событии, если он уже оставлен */
+    comment?: string | null;
+    mark?: string | number | null;
+    /** Список отзывов участников. Может отсутствовать */
+    comments?: EventComment[] | null;
 }
 
 export interface Member {
@@ -83,6 +108,10 @@ export interface CreateEventDTO {
     address: [number, number];
     category_id: number;
     slots: number;
+    link?: string | null;
+    condition: 'paid' | 'free';
+    price?: number | string | null;
+    is_public: number | boolean;
     /** Дата в формате d/m/Y H:i */
     planing_time: number | null;
     /** Массив тегов (строки) */

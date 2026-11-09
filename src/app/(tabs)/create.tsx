@@ -1,20 +1,21 @@
 // src/app/(tabs)/create.tsx — создание события
 import DateTimePicker from '@/components/date-time-picker';
 import * as Location from 'expo-location';
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
-import { Button, Surface, Text, TextInput, useTheme } from 'react-native-paper';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {router} from 'expo-router';
+import {useEffect, useState} from 'react';
+import {Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View} from 'react-native';
+import {Button, Surface, Text, TextInput, useTheme} from 'react-native-paper';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
-import AddressPicker, { Coordinates } from '@/components/address-picker';
+import AddressPicker, {Coordinates} from '@/components/address-picker';
 import ImagePickerWithCrop from '@/components/image-picker';
 import PageLayout from '@/components/page-layout';
+import SegmentedToggle from '@/components/segmented-toggle';
 import SingleSelect from '@/components/single-select';
 import TagCloudInput from '@/components/tag-cloud-input';
-import { MaxContentWidth, Spacing } from '@/constants/theme';
-import { useCategoriesStore, useEventsStore } from '@/stores';
-import { useTagsStore } from "@/stores/tagsStore";
+import {MaxContentWidth, Spacing} from '@/constants/theme';
+import {useCategoriesStore, useEventsStore} from '@/stores';
+import {useTagsStore} from "@/stores/tagsStore";
 
 export default function CreateEventScreen() {
   const theme = useTheme();
@@ -41,6 +42,9 @@ export default function CreateEventScreen() {
   const [locationLoading, setLocationLoading] = useState(false);
   const [planingTime, setPlaningTime] = useState<Date | null>(null);
   const [slots, setSlots] = useState('');
+  const [condition, setCondition] = useState<'paid' | 'free'>('free');
+  const [price, setPrice] = useState('');
+  const [isPublic, setIsPublic] = useState<number>(1);
   const [tags, setTags] = useState<string[]>([]);
   const [thumbnail, setThumbnail] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -57,6 +61,11 @@ export default function CreateEventScreen() {
       return;
     }
 
+    if (condition === 'paid' && (!price || Number(price) <= 0)) {
+      setFeedback({type: 'error', text: 'Укажите цену для платного события'});
+      return;
+    }
+
     setFeedback(null);
     try {
       const saved = await addEvent({
@@ -64,6 +73,9 @@ export default function CreateEventScreen() {
         description,
         category_id: categoryId,
         address: coordinates,
+        condition,
+        price: condition === 'paid' ? Number(price) : 0,
+        is_public: Number(isPublic),
         planing_time: planingTime ? Math.floor(planingTime.getTime() / 1000) : null,
         slots: Number(slots),
         tags,
@@ -182,6 +194,46 @@ export default function CreateEventScreen() {
                     placeholder="20"
                 />
 
+                {/* Тип события */}
+                <View>
+                  <Text variant="labelLarge" style={styles.toggleLabel}>Условия участия</Text>
+                  <SegmentedToggle<'paid' | 'free'>
+                      options={[
+                        {label: 'Бесплатно', value: 'free'},
+                        {label: 'Платно', value: 'paid'},
+                      ]}
+                      value={condition}
+                      onChange={(v) => setCondition(v ?? 'free')}
+                      style={styles.toggleRow}
+                      buttonStyle={styles.toggleButton}
+                  />
+                </View>
+
+                {condition === 'paid' && (
+                    <TextInput
+                        mode="outlined"
+                        label="Цена, UAH"
+                        value={price}
+                        onChangeText={(text) => setPrice(sanitizeDigits(text))}
+                        keyboardType="numeric"
+                        placeholder="500"
+                    />
+                )}
+
+                <View>
+                  <Text variant="labelLarge" style={styles.toggleLabel}>Публичность</Text>
+                  <SegmentedToggle<number>
+                      options={[
+                        {label: 'Публичное', value: 1},
+                        {label: 'Приватное', value: 0},
+                      ]}
+                      value={Number(isPublic)}
+                      onChange={(v) => setIsPublic(v ?? 1)}
+                      style={styles.toggleRow}
+                      buttonStyle={styles.toggleButton}
+                  />
+                </View>
+
                 {/* Теги */}
                 <TagCloudInput
                     value={tags}
@@ -273,6 +325,16 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     gap: Spacing.three,
     borderWidth: 1,
+  },
+  toggleLabel: {
+    marginBottom: Spacing.one,
+    fontWeight: '600',
+  },
+  toggleRow: {
+    marginVertical: 0,
+  },
+  toggleButton: {
+    flex: 1,
   },
   coverRow: {
     flexDirection: 'row',

@@ -63,6 +63,10 @@ function eventFormData(dto: Partial<CreateEventDTO>): FormData {
     dto.address?.forEach((addr) => fd.append('address[]', String(addr)));
     if (dto.category_id !== undefined) fd.append('category_id', String(dto.category_id));
     if (dto.slots !== undefined) fd.append('slots', String(dto.slots));
+    if (dto.link !== undefined && dto.link !== null) fd.append('link', String(dto.link));
+    if (dto.condition !== undefined) fd.append('condition', String(dto.condition));
+    if (dto.price !== undefined && dto.price !== null) fd.append('price', String(dto.price));
+    if (dto.is_public !== undefined) fd.append('is_public', String(dto.is_public ? 1 : 0));
     if (dto.planing_time !== undefined) fd.append('planing_time', String(dto.planing_time));
     dto.tags?.forEach((tag) => fd.append('tags[]', String(tag)));
 

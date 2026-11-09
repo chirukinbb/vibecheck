@@ -296,7 +296,8 @@ Authorization: Bearer 1|abc123def456...
           "description": "Описание события",
           "slots": 10,
           "reserved": 3,
-          "planing_time": 1720000000
+          "planing_time": 1720000000,
+          "distance_km": 4
         }
     ],
   "links": {
@@ -353,6 +354,7 @@ Authorization: Bearer 1|abc123def456...
       "coordinate_lng": "37.6173",
       "country": "Russia",
       "planing_time": 1720000000,
+      "distance_km": 4,
       "slots": 10,
       "reserved": 3,
       "chat_id": 1,
@@ -538,7 +540,7 @@ Laravel возвращает ошибки валидации в формате:
 
 **Права**: `api view event list`
 
-> ⚠️ Поля в списке — **сокращённые**: `id, title, thumbnail_url, category, description, slots, reserved, planing_time`. Без `address`, координат, `country` и `author`.
+> ⚠️ Поля в списке — **сокращённые**: `id, title, thumbnail_url, category, description, slots, reserved, planing_time, distance_km`. Без `address`, координат, `country` и `author`.
 
 ---
 
@@ -1440,6 +1442,8 @@ MessageAuthorMiddleware** | Только автор сообщения | 403 `{"
 ### Важные моменты:
 
 - **planing_time** — отдаётся как Unix timestamp (секунды), принимается как `d/m/Y H:i`
+- **distance_km** — вычисляется сервером и добавляется в ответ при наличии расчёта расстояния до события; число в
+  километрах, может быть `null`
 - **thumbnail** — только `.webp`, до 1024 КБ
 - **reserved** = members.count()
 - Пагинация: 15 событий на страницу, поля `links` + `meta`

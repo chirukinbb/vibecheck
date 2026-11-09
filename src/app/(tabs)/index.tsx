@@ -189,6 +189,7 @@ export default function EventsListScreen() {
               const slotsLeft = item.slots - (item.reserved ?? 0);
               const isFull = slotsLeft <= 0;
               const isAlmostFull = slotsLeft <= 3;
+              const distanceText = item.distance_km != null ? `≈ ${item.distance_km} км` : null;
 
               const statusColor = isFull
                   ? theme.colors.error
@@ -234,6 +235,19 @@ export default function EventsListScreen() {
                       >
                         {item.description}
                       </Text>
+
+                      {distanceText && (
+                          <View style={styles.distanceRow}>
+                            <Icon
+                                source="map-marker-distance"
+                                size={16}
+                                color={theme.colors.primary}
+                            />
+                            <Text variant="bodyMedium" style={{color: theme.colors.primary}}>
+                              {distanceText}
+                            </Text>
+                          </View>
+                      )}
 
                       <View style={styles.cardFooter}>
                         <View style={styles.dateContainer}>
@@ -380,6 +394,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingTop: Spacing.one,
+  },
+  distanceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
   },
   dateContainer: {
     flexDirection: 'row',

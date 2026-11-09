@@ -2,6 +2,7 @@
 
 /** Профиль пользователя (из ответа GET /api/v1/me и PATCH /api/v1/profile) */
 export interface Profile {
+    id: number;
     name: string;
     /** URI аватара (WebP). Поле phone/country_phone_code/country_phone_iso удалены из API */
     avatar_url: string | null;
